@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react'
+import { Play, Sunrise, Sun, CloudSun, Sunset, Moon, MapPin } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { computeNextPrayer, getCurrentPosition, getPrayerTimesByCoords } from '../lib/prayerTimes'
 
@@ -34,23 +34,32 @@ export function Home() {
   const prayers = useMemo(() => {
     const t = timings || {}
     return [
-      { name: 'FAJR', time: t['Fajr'] ?? '--:--', icon: '🌅' },
-      { name: 'DHUHR', time: t['Dhuhr'] ?? '--:--', icon: '☀️' },
-      { name: 'ASR', time: t['Asr'] ?? '--:--', icon: '🌤️' },
-      { name: 'MAGHRIB', time: t['Maghrib'] ?? '--:--', icon: '🌇' },
-      { name: 'ISHA', time: t['Isha'] ?? '--:--', icon: '🌙' },
+      { name: 'FAJR', time: t['Fajr'] ?? '--:--', icon: Sunrise },
+      { name: 'DHUHR', time: t['Dhuhr'] ?? '--:--', icon: Sun },
+      { name: 'ASR', time: t['Asr'] ?? '--:--', icon: CloudSun },
+      { name: 'MAGHRIB', time: t['Maghrib'] ?? '--:--', icon: Sunset },
+      { name: 'ISHA', time: t['Isha'] ?? '--:--', icon: Moon },
     ].map((p) => ({ ...p, active: next?.name?.toUpperCase() === p.name }))
   }, [timings, next])
 
   return (
     <div className="space-y-6 w-full max-w-full px-4 md:px-6 lg:px-10 pb-10">
       {/* Hero Section */}
-      <div className="relative h-72 bg-primary rounded-3xl overflow-hidden w-full">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary-dark" />
+      <div className="relative h-[420px] bg-primary rounded-3xl overflow-hidden w-full shadow-xl">
+        {/* Mosque Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(/src/public/peaceful_mosque_courtyard_at_sunset.png)',
+            backgroundPosition: 'center center'
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
         <div className="relative z-10 h-full flex flex-col justify-center p-8">
-          <p className="text-white/80 text-sm mb-2">
-            📍 {coords ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}` : 'Location'} • {timezone || '—'}
-          </p>
+          <div className="inline-flex items-center gap-2 bg-black/50 backdrop-blur-md text-white text-sm px-4 py-3 rounded-full mb-4 w-fit border border-white/10">
+            <MapPin size={18} className="text-white flex-shrink-0" />
+            <span className="font-medium">{timezone ? timezone.split('/').join(', ') : 'Location'}</span>
+          </div>
           <h1 className="text-4xl font-bold text-white mb-3">Find Peace in Remembrance</h1>
           <p className="text-white/80 text-sm mb-6">
             "Verily, in the remembrance of Allah do hearts find rest." (13:28)
@@ -67,25 +76,34 @@ export function Home() {
       </div>
 
       {/* Prayer Times */}
-      <div className="flex gap-3">
-        {prayers.map((prayer) => (
-          <div
-            key={prayer.name}
-            className={`flex-1 text-center py-4 px-2 rounded-2xl transition ${
-              prayer.active
-                ? 'bg-primary text-white'
-                : 'bg-white border border-gray-100'
-            }`}
-          >
-            <p className="text-2xl mb-1">{prayer.icon}</p>
-            <p className={`text-[10px] uppercase tracking-wider font-medium ${
-              prayer.active ? 'text-white/80' : 'text-gray-400'
-            }`}>{prayer.name}</p>
-            <p className={`text-lg font-bold mt-1 ${
-              prayer.active ? 'text-white' : 'text-gray-800'
-            }`}>{loading ? '—' : prayer.time}</p>
-          </div>
-        ))}
+      <div className="flex gap-4">
+        {prayers.map((prayer) => {
+          const IconComponent = prayer.icon
+          return (
+            <div
+              key={prayer.name}
+              className={`flex-1 text-center py-8 px-4 rounded-3xl transition-all ${
+                prayer.active
+                  ? 'bg-primary text-white border-4 border-primary shadow-lg'
+                  : 'bg-white border-2 border-gray-200 shadow-sm'
+              }`}
+            >
+              <IconComponent 
+                size={32} 
+                className={`mx-auto mb-4 ${
+                  prayer.active ? 'text-white' : 'text-gray-400'
+                }`}
+                strokeWidth={1.5}
+              />
+              <p className={`text-xs uppercase tracking-wider font-semibold mb-3 ${
+                prayer.active ? 'text-white/95' : 'text-gray-500'
+              }`}>{prayer.name}</p>
+              <p className={`text-3xl font-bold ${
+                prayer.active ? 'text-white' : 'text-gray-900'
+              }`}>{loading ? '—' : prayer.time}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* Daily Verse & Memorization */}

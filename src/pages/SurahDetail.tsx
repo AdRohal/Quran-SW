@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileText } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Settings, X } from 'lucide-react'
 
 interface Ayah {
   number: number
@@ -18,6 +18,7 @@ interface Surah {
 }
 
 type ViewMode = 'verse' | 'continuous'
+type Qiraat = 'hafs' | 'warsh'
 
 export function SurahDetail() {
   const { surahNumber } = useParams<{ surahNumber: string }>()
@@ -27,12 +28,15 @@ export function SurahDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('verse')
+  const [showSettings, setShowSettings] = useState(false)
+  const [fontSize, setFontSize] = useState(24) // Default 3xl is ~30px, so starting at 24px
+  const [qiraat, setQiraat] = useState<Qiraat>('hafs')
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
       try {
         setLoading(true)
-        // Fetch surah details
+        // Fetch surah details from alquran.cloud
         const surahRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`)
         const surahData = await surahRes.json()
         
@@ -42,14 +46,40 @@ export function SurahDetail() {
           setError('Failed to fetch surah data')
         }
 
-        // Fetch ayahs with Uthmani text from Tanzil project
-        const ayahRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`)
-        const ayahData = await ayahRes.json()
-        
-        if (ayahData.code === 200) {
-          setAyahs(ayahData.data.ayahs)
+        // Fetch ayahs based on selected Qira'at
+        if (qiraat === 'warsh') {
+          // Use alquran.cloud for Warsh as it has proper support
+          const warshRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/ar.warsh`)
+          const warshData = await warshRes.json()
+          if (warshData.code === 200) {
+            setAyahs(warshData.data.ayahs)
+          } else {
+            setError('Failed to fetch Warsh recitation')
+          }
         } else {
-          setError('Failed to fetch ayahs')
+          // Use Quran.com API for Hafs with Uthmani script
+          const response = await fetch(
+            `https://api.quran.com/api/v4/verses/by_chapter/${surahNumber}?language=en&words=false&per_page=300&fields=text_uthmani`
+          )
+          const data = await response.json()
+          
+          if (data.verses) {
+            const transformedAyahs = data.verses.map((verse: any) => ({
+              number: verse.id,
+              text: verse.text_uthmani || '',
+              numberInSurah: verse.verse_number
+            }))
+            setAyahs(transformedAyahs)
+          } else {
+            // Fallback to alquran.cloud for Hafs
+            const fallbackRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`)
+            const fallbackData = await fallbackRes.json()
+            if (fallbackData.code === 200) {
+              setAyahs(fallbackData.data.ayahs)
+            } else {
+              setError('Failed to fetch ayahs')
+            }
+          }
         }
       } catch (err) {
         setError('Error fetching surah data')
@@ -60,7 +90,7 @@ export function SurahDetail() {
     }
 
     fetchSurahDetail()
-  }, [surahNumber])
+  }, [surahNumber, qiraat])
 
   if (loading) {
     return (
@@ -196,23 +226,23 @@ export function SurahDetail() {
 
             {/* Bismillah - Large and Prominent */}
             <div className="text-center mb-12 pb-8 border-b-2 border-[#2f7f5c]">
-              <p className="text-4xl font-bold text-[#2f7f5c] font-arabic">
+              <p className="text-4xl font-bold text-[#2f7f5c] mb-4" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>
                 بسم الله الرحمن الرحيم
               </p>
-              <p className="text-gray-600 mt-2 text-sm">In the name of Allah, the Most Gracious, the Most Merciful</p>
+              <p className="text-gray-600 text-sm">In the name of Allah, the Most Gracious, the Most Merciful</p>
             </div>
 
             {/* Ayahs - Book Style with Natural Text Wrapping */}
-            <div className="text-right text-2xl leading-loose text-gray-800 font-arabic break-words">
+            <div className="text-right leading-loose text-gray-800 break-words" style={{fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px`}}>
               {ayahs.map((ayah) => (
-                <span key={ayah.number} className="inline">
+                <span key={ayah.number} className="inline" style={{direction: 'rtl'}}>
                   {ayah.text}
-                  <span className="relative inline-flex items-center justify-center mx-1" style={{verticalAlign: 'middle'}}>
+                  <span className="relative inline-flex items-center justify-center mx-2 align-middle">
                     <svg className="w-7 h-7" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <circle cx="20" cy="20" r="18" className="text-[#2f7f5c]" />
                       <circle cx="20" cy="20" r="12" opacity="0.3" className="text-[#2f7f5c]" />
                     </svg>
-                    <span className="absolute text-xs font-bold text-[#2f7f5c]">
+                    <span className="absolute text-xs font-bold text-[#2f7f5c]" style={{fontFamily: 'sans-serif'}}>
                       {ayah.numberInSurah}
                     </span>
                   </span>
@@ -227,6 +257,86 @@ export function SurahDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Settings Button - Only in Reading Mode */}
+      {viewMode === 'continuous' && (
+        <>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="fixed bottom-6 right-6 bg-[#2f7f5c] hover:bg-[#1f5f46] text-white rounded-full p-4 shadow-lg transition z-40"
+          >
+            <Settings size={24} />
+          </button>
+
+          {/* Settings Panel */}
+          {showSettings && (
+            <div className="fixed bottom-24 right-6 bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-[#2f7f5c]">Reading Settings</h3>
+                <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Font Size Control */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Font Size: {fontSize}px
+                </label>
+                <input
+                  type="range"
+                  min="16"
+                  max="48"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2f7f5c]"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Small</span>
+                  <span>Large</span>
+                </div>
+              </div>
+
+              {/* Qira'at Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Qira'at (Recitation Style)
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="qiraat"
+                      value="hafs"
+                      checked={qiraat === 'hafs'}
+                      onChange={() => setQiraat('hafs')}
+                      className="mr-3 accent-[#2f7f5c]"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">Hafs (عن عاصم)</p>
+                      <p className="text-xs text-gray-500">Most common - Used by 95% of Muslims</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="qiraat"
+                      value="warsh"
+                      checked={qiraat === 'warsh'}
+                      onChange={() => setQiraat('warsh')}
+                      className="mr-3 accent-[#2f7f5c]"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">Warsh (عن نافع)</p>
+                      <p className="text-xs text-gray-500">Popular in North & West Africa</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Summary */}
