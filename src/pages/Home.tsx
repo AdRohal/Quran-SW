@@ -1,5 +1,6 @@
 import { Play, Sunrise, Sun, CloudSun, Sunset, Moon, MapPin, CalendarDays, ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { computeNextPrayer, getCurrentPosition, getPrayerTimesByCoords } from '../lib/prayerTimes'
 
 const ISLAMIC_HOLIDAYS = [
@@ -10,6 +11,7 @@ const ISLAMIC_HOLIDAYS = [
 ]
 
 export function Home() {
+  const navigate = useNavigate()
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null)
   const [timings, setTimings] = useState<Record<string, string> | null>(null)
   const [timezone, setTimezone] = useState('')
@@ -123,7 +125,10 @@ export function Home() {
         <div className="md:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-serif font-bold text-gray-800">Upcoming Islamic Holidays</h2>
-            <button className="text-teal-700 text-sm font-semibold hover:underline flex items-center gap-1">
+            <button 
+              onClick={() => navigate('/calendar')}
+              className="text-teal-700 text-sm font-semibold hover:underline flex items-center gap-1 transition-colors hover:text-teal-800"
+            >
               Full Calendar <ChevronRight className="w-4 h-4" />
             </button>
           </div>

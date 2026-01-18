@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Radio, Users, Clock, X, Search } from 'lucide-react';
+import { useLive } from '../hooks/useLive';
 
 interface LiveStream {
   id: number;
@@ -14,11 +15,22 @@ interface LiveStream {
 }
 
 export function Live() {
+  const { currentStream, isPlaying, playStream, clearStream, setFullView } = useLive();
   const [streams, setStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Clear the current stream when entering Live page to always show grid view
+    clearStream();
+  }, []);
+
+  useEffect(() => {
+    // Set full view when on Live page
+    setFullView(true);
+    return () => setFullView(false);
+  }, [setFullView]);
 
   useEffect(() => {
     fetchMakkahLiveStreams();
@@ -115,26 +127,26 @@ export function Live() {
     }
   };
 
-  if (selectedStream) {
+  if (currentStream) {
     return (
       <div className="min-h-screen">
         <div className="mx-auto px-6 md:px-12 lg:px-16 py-6">
           <button
-            onClick={() => setSelectedStream(null)}
+            onClick={() => clearStream()}
             className="mb-6 text-teal-700 font-semibold hover:underline flex items-center gap-2"
           >
             ← Back to Live Streams
           </button>
 
-          <div className="bg-black rounded-3xl overflow-hidden shadow-2xl mb-8">
+          <div className="bg-black rounded-3xl overflow-hidden shadow-2xl mb-8 mx-auto" style={{ width: '70%' }}>
             <div className="aspect-video bg-gray-900 flex items-center justify-center relative group">
-              {selectedStream.streamUrl ? (
+              {currentStream.streamUrl ? (
                 <>
-                  {selectedStream.streamUrl.includes('youtube.com') ? (
+                  {currentStream.streamUrl.includes('youtube.com') ? (
                     <iframe
                       className="w-full h-full"
-                      src={selectedStream.streamUrl.replace('embed/', 'embed/') + '?autoplay=1'}
-                      title={selectedStream.name}
+                      src={currentStream.streamUrl.replace('embed/', 'embed/') + '?autoplay=1'}
+                      title={currentStream.name}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
@@ -146,24 +158,24 @@ export function Live() {
                       autoPlay
                       controlsList="nodownload"
                     >
-                      <source src={selectedStream.streamUrl} type="application/x-mpegURL" />
+                      <source src={currentStream.streamUrl} type="application/x-mpegURL" />
                       Your browser does not support the video tag.
                     </video>
                   )}
                 </>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  {selectedStream.thumbnail && (selectedStream.thumbnail === 'quran-tv' || selectedStream.thumbnail === 'sunna-tv') ? (
+                  {currentStream.thumbnail && (currentStream.thumbnail === 'quran-tv' || currentStream.thumbnail === 'sunna-tv') ? (
                     <img 
-                      src={`/src/public/live/${selectedStream.thumbnail}.png`} 
-                      alt={selectedStream.name}
+                      src={`/src/public/live/${currentStream.thumbnail}.png`} 
+                      alt={currentStream.name}
                       className="max-w-sm h-auto object-contain"
                     />
                   ) : (
-                    <div className="text-8xl mb-6">{selectedStream.thumbnail || '📺'}</div>
+                    <div className="text-8xl mb-6">{currentStream.thumbnail || '📺'}</div>
                   )}
                   <div className="text-white text-center">
-                    <p className="text-3xl font-bold mb-3">{selectedStream.name}</p>
+                    <p className="text-3xl font-bold mb-3">{currentStream.name}</p>
                     <div className="flex items-center justify-center gap-2 text-green-400 text-lg">
                       <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                       <span className="font-semibold">LIVE</span>
@@ -184,8 +196,8 @@ export function Live() {
             {/* Video Info */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                <h1 className="text-3xl font-bold text-gray-800 mb-3">{selectedStream.name}</h1>
-                <p className="text-gray-600 text-lg mb-6">{selectedStream.description}</p>
+                <h1 className="text-3xl font-bold text-gray-800 mb-3">{currentStream.name}</h1>
+                <p className="text-gray-600 text-lg mb-6">{currentStream.description}</p>
 
                 <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200">
                   <div className="p-4 bg-teal-50 rounded-xl">
@@ -193,21 +205,21 @@ export function Live() {
                       <Users className="w-5 h-5 text-teal-700" />
                       <span className="text-gray-600 font-semibold text-sm">Viewers</span>
                     </div>
-                    <p className="text-2xl font-bold text-teal-700">{(selectedStream.viewers || 0).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-teal-700">{(currentStream.viewers || 0).toLocaleString()}</p>
                   </div>
                   <div className="p-4 bg-teal-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <Radio className="w-5 h-5 text-teal-700" />
                       <span className="text-gray-600 font-semibold text-sm">Category</span>
                     </div>
-                    <p className="text-2xl font-bold text-teal-700">{selectedStream.category}</p>
+                    <p className="text-2xl font-bold text-teal-700">{currentStream.category}</p>
                   </div>
                   <div className="p-4 bg-teal-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-5 h-5 text-teal-700" />
                       <span className="text-gray-600 font-semibold text-sm">Language</span>
                     </div>
-                    <p className="text-2xl font-bold text-teal-700">{selectedStream.language}</p>
+                    <p className="text-2xl font-bold text-teal-700">{currentStream.language}</p>
                   </div>
                 </div>
               </div>
@@ -274,7 +286,7 @@ export function Live() {
             ).map((stream) => (
               <div
                 key={stream.id}
-                onClick={() => setSelectedStream(stream)}
+                onClick={() => playStream(stream)}
                 className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition cursor-pointer border border-gray-100 group"
               >
                 {/* Thumbnail */}
