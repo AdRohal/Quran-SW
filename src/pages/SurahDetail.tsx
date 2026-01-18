@@ -27,9 +27,9 @@ export function SurahDetail() {
   const [ayahs, setAyahs] = useState<Ayah[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('verse')
+  const [viewMode, setViewMode] = useState<ViewMode>('continuous')
   const [showSettings, setShowSettings] = useState(false)
-  const [fontSize, setFontSize] = useState(24)
+  const [fontSize, setFontSize] = useState(30)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
 
   useEffect(() => {
@@ -257,7 +257,7 @@ export function SurahDetail() {
           </button>
 
           {showSettings && (
-            <div className="fixed right-6 bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200">
+            <div className="fixed bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200" style={{ bottom: '120px', right: '30px', marginBottom: '24px' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-teal-700">Reading Settings</h3>
                 <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">

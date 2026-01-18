@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Volume2, Users, Loader, Search } from 'lucide-react';
+import { Play, Volume2, Users, Loader, Search, Radio as RadioIcon } from 'lucide-react';
 import { useRadio } from '../providers/RadioProvider';
 
 interface RadioStation {
@@ -117,7 +117,7 @@ export function Radio() {
               >
                 {/* Header */}
                 <div className="relative aspect-video bg-gradient-to-br from-teal-600 to-teal-800 flex items-center justify-center overflow-hidden">
-                  <div className="text-8xl group-hover:scale-110 transition transform">📻</div>
+                  <RadioIcon className="w-24 h-24 text-white group-hover:scale-110 transition transform" strokeWidth={1.5} />
                   
                   {/* Play Button */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/30">

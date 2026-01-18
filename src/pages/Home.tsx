@@ -1,6 +1,13 @@
-import { Play, Sunrise, Sun, CloudSun, Sunset, Moon, MapPin } from 'lucide-react'
+import { Play, Sunrise, Sun, CloudSun, Sunset, Moon, MapPin, CalendarDays, ChevronRight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { computeNextPrayer, getCurrentPosition, getPrayerTimesByCoords } from '../lib/prayerTimes'
+
+const ISLAMIC_HOLIDAYS = [
+  { name: 'Ramadan Begins', arabicName: 'بداية رمضان', date: 'FEB 18, 2026', type: 'Major' },
+  { name: 'Eid al-Fitr', arabicName: 'عيد الفطر', date: 'MAR 20, 2026', type: 'Major' },
+  { name: 'Day of Arafah', arabicName: 'يوم عرفة', date: 'MAY 27, 2026', type: 'Major' },
+  { name: 'Eid al-Adha', arabicName: 'عيد الأضحى', date: 'MAY 28, 2026', type: 'Major' },
+]
 
 export function Home() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null)
@@ -65,7 +72,7 @@ export function Home() {
             <p className="text-white/80 text-sm mb-2">
               "Verily, in the remembrance of Allah do hearts find rest." (13:28)
             </p>
-            <p className="text-white/80 text-2xl text-right" style={{ fontFamily: "'Amiri Quran', serif" }}>
+            <p className="text-white/80 text-2xl text-right" style={{ fontFamily: "var(--font-arabic)" }}>
               "إن بذكر الله تطمئن القلوب" (13:28)
             </p>
           </div>
@@ -111,6 +118,51 @@ export function Home() {
         })}
       </div>
 
+      {/* Islamic Calendar & Holidays */}
+      <section className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-serif font-bold text-gray-800">Upcoming Islamic Holidays</h2>
+            <button className="text-teal-700 text-sm font-semibold hover:underline flex items-center gap-1">
+              Full Calendar <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {ISLAMIC_HOLIDAYS.slice(0, 4).map((holiday) => (
+              <div key={holiday.name} className="group hover:shadow-lg transition-all cursor-pointer bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center text-[10px] font-bold bg-teal-700/10 text-teal-700">
+                    <CalendarDays className="w-5 h-5 mb-0.5" />
+                    <span>2026</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm text-gray-800 group-hover:text-teal-700 transition-colors">{holiday.name}</h4>
+                      {holiday.type === 'Major' && <div className="w-1.5 h-1.5 rounded-full bg-teal-700 animate-pulse" />}
+                    </div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{holiday.date}</p>
+                    <p className="text-teal-700/70 text-sm" style={{ fontFamily: "var(--font-arabic)" }}>{holiday.arabicName}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-4">
+          <h2 className="text-xl font-serif font-bold text-gray-800">Current Date</h2>
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-200 rounded-2xl shadow-sm h-full flex flex-col justify-center text-center p-6 relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-sm font-medium text-teal-700/70 uppercase tracking-[0.2em] mb-2">Rajab 27, 1447</p>
+              <h3 className="text-3xl font-serif font-bold text-gray-800 mb-1">January 18</h3>
+              <p className="text-gray-600">Sunday, 2026</p>
+              <div className="mt-6 p-3 bg-white rounded-2xl border border-teal-200 text-xs text-teal-700 font-medium shadow-sm">
+                Al-Isra' wal-Mi'raj
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Daily Verse & Memorization */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Daily Verse */}
@@ -123,7 +175,7 @@ export function Home() {
             </button>
           </div>
           <div className="bg-gray-50 rounded-xl p-6 text-center">
-            <p className="text-2xl text-primary font-arabic mb-4 leading-loose">
+            <p className="text-2xl text-primary mb-4 leading-loose" style={{ fontFamily: "var(--font-arabic)" }}>
               فَإِنَّ مَعَ الْعُسْرِ يُسْرًا
             </p>
             <p className="text-gray-600 italic text-sm mb-3">
