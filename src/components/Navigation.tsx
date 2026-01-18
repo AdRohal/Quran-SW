@@ -6,6 +6,7 @@ export function Navigation() {
     { icon: Home, label: 'Home', path: '/' },
     { icon: Radio, label: 'Live', path: '/live' },
     { icon: BookOpen, label: 'Quran', path: '/quran' },
+    { icon: Radio, label: 'Radio', path: '/radio' },
     { icon: Clock, label: 'Prayers', path: '/prayers' },
     { icon: Heart, label: 'Adkar', path: '/adkar' },
     { icon: User, label: 'Profile', path: '/profile' },

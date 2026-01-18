@@ -250,13 +250,14 @@ export function SurahDetail() {
         <>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="fixed bottom-6 right-6 bg-teal-700 hover:bg-teal-900 text-white rounded-full p-4 shadow-lg transition z-40"
+            className="fixed bg-teal-700 hover:bg-teal-900 text-white rounded-full p-4 shadow-lg transition z-40"
+            style={{ bottom: '24px', right: '30px' }}
           >
             <Settings size={24} />
           </button>
 
           {showSettings && (
-            <div className="fixed bottom-24 right-6 bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200">
+            <div className="fixed right-6 bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-teal-700">Reading Settings</h3>
                 <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">

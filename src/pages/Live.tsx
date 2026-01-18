@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Radio, Users, Clock, X } from 'lucide-react';
+import { Play, Radio, Users, Clock, X, Search } from 'lucide-react';
 
 interface LiveStream {
   id: number;
@@ -17,6 +17,7 @@ export function Live() {
   const [streams, setStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -238,10 +239,24 @@ export function Live() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto px-6 md:px-12 lg:px-16 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-3">Makkah Live - Al-Masjid Al-Haram</h1>
-          <p className="text-gray-600">Watch live broadcasts from the Holy Mosque in Makkah</p>
+        {/* Header with Search */}
+        <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10 mb-8">
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-bold text-teal-700 mb-1">Makkah Live</h1>
+              <p className="text-teal-700">Watch live broadcasts from the Holy Mosque</p>
+            </div>
+            <div className="relative flex-shrink-0 w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search by channel name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -254,7 +269,9 @@ export function Live() {
         {/* Live Streams Grid */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {streams.map((stream) => (
+            {streams.filter(stream => 
+              stream.name.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((stream) => (
               <div
                 key={stream.id}
                 onClick={() => setSelectedStream(stream)}
