@@ -1,9 +1,10 @@
-import { Home, BookOpen, Clock, Heart, User } from 'lucide-react'
+import { Home, BookOpen, Clock, Heart, User, Radio } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 export function Navigation() {
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
+    { icon: Radio, label: 'Live', path: '/live' },
     { icon: BookOpen, label: 'Quran', path: '/quran' },
     { icon: Clock, label: 'Prayers', path: '/prayers' },
     { icon: Heart, label: 'Adkar', path: '/adkar' },

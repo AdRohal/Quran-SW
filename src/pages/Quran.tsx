@@ -42,7 +42,7 @@ export function Quran() {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
+      <div className="space-y-6 pb-6 px-6 md:px-12 lg:px-16">
         <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
           <h1 className="text-3xl font-bold text-teal-700 mb-1">The Noble Quran</h1>
           <p className="text-teal-700">Read, Listen, and Memorize</p>
@@ -56,7 +56,7 @@ export function Quran() {
 
   if (error) {
     return (
-      <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
+      <div className="space-y-6 pb-6 px-6 md:px-12 lg:px-16">
         <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
           <h1 className="text-3xl font-bold text-teal-700 mb-1">The Noble Quran</h1>
           <p className="text-teal-700">Read, Listen, and Memorize</p>
@@ -69,7 +69,7 @@ export function Quran() {
   }
 
   return (
-    <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
+    <div className="space-y-6 pb-6 px-6 md:px-12 lg:px-16">
       <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
         <div className="flex items-center justify-between gap-6">
           <div>

@@ -43,7 +43,7 @@ export function Home() {
   }, [timings, next])
 
   return (
-    <div className="space-y-6 w-full max-w-full px-4 md:px-6 lg:px-10 pb-10">
+    <div className="space-y-6 w-full max-w-full px-6 md:px-12 lg:px-16 pb-10">
       {/* Hero Section */}
       <div className="relative h-[420px] bg-primary rounded-3xl overflow-hidden w-full shadow-xl">
         {/* Mosque Background Image */}
