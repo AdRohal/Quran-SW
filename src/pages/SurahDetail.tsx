@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+﻿import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, FileText, Settings, X } from 'lucide-react'
 
 interface Ayah {
@@ -29,26 +29,22 @@ export function SurahDetail() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('verse')
   const [showSettings, setShowSettings] = useState(false)
-  const [fontSize, setFontSize] = useState(24) // Default 3xl is ~30px, so starting at 24px
+  const [fontSize, setFontSize] = useState(24)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
       try {
         setLoading(true)
-        // Fetch surah details from alquran.cloud
         const surahRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`)
         const surahData = await surahRes.json()
-        
         if (surahData.code === 200) {
           setSurah(surahData.data)
         } else {
           setError('Failed to fetch surah data')
         }
 
-        // Fetch ayahs based on selected Qira'at
         if (qiraat === 'warsh') {
-          // Use alquran.cloud for Warsh as it has proper support
           const warshRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/ar.warsh`)
           const warshData = await warshRes.json()
           if (warshData.code === 200) {
@@ -57,21 +53,18 @@ export function SurahDetail() {
             setError('Failed to fetch Warsh recitation')
           }
         } else {
-          // Use Quran.com API for Hafs with Uthmani script
           const response = await fetch(
             `https://api.quran.com/api/v4/verses/by_chapter/${surahNumber}?language=en&words=false&per_page=300&fields=text_uthmani`
           )
           const data = await response.json()
-          
           if (data.verses) {
-            const transformedAyahs = data.verses.map((verse: any) => ({
-              number: verse.id,
-              text: verse.text_uthmani || '',
-              numberInSurah: verse.verse_number
+            const transformed = data.verses.map((v: any) => ({
+              number: v.id,
+              text: v.text_uthmani || '',
+              numberInSurah: v.verse_number,
             }))
-            setAyahs(transformedAyahs)
+            setAyahs(transformed)
           } else {
-            // Fallback to alquran.cloud for Hafs
             const fallbackRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`)
             const fallbackData = await fallbackRes.json()
             if (fallbackData.code === 200) {
@@ -97,13 +90,13 @@ export function SurahDetail() {
       <div className="space-y-6 pb-6">
         <button
           onClick={() => navigate('/quran')}
-          className="flex items-center gap-2 text-[#2f7f5c] hover:text-[#1f5f46] transition"
+          className="flex items-center gap-2 text-teal-700 hover:text-teal-900 transition"
         >
           <ArrowLeft size={20} />
           Back to Quran
         </button>
         <div className="flex justify-center items-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2f7f5c]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-700" />
         </div>
       </div>
     )
@@ -114,7 +107,7 @@ export function SurahDetail() {
       <div className="space-y-6 pb-6">
         <button
           onClick={() => navigate('/quran')}
-          className="flex items-center gap-2 text-[#2f7f5c] hover:text-[#1f5f46] transition"
+          className="flex items-center gap-2 text-teal-700 hover:text-teal-900 transition"
         >
           <ArrowLeft size={20} />
           Back to Quran
@@ -128,17 +121,15 @@ export function SurahDetail() {
 
   return (
     <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
-      {/* Back Button */}
       <button
         onClick={() => navigate('/quran')}
-        className="flex items-center gap-2 text-[#2f7f5c] hover:text-[#1f5f46] transition font-semibold"
+        className="flex items-center gap-2 text-teal-700 hover:text-teal-900 transition font-semibold"
       >
         <ArrowLeft size={20} />
         Back to Quran
       </button>
 
-      {/* Surah Header */}
-      <div className="bg-gradient-to-r from-[#2f7f5c] to-[#1f5f46] rounded-xl p-8 shadow-lg text-white sticky top-0 z-10">
+      <div className="bg-gradient-to-r from-teal-700 to-teal-900 rounded-xl p-8 shadow-lg text-white sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold mb-2">{surah.englishName}</h1>
@@ -152,13 +143,12 @@ export function SurahDetail() {
         </div>
       </div>
 
-      {/* View Mode Tabs */}
       <div className="flex gap-2 justify-center sticky top-32 z-10 bg-white py-2">
         <button
           onClick={() => setViewMode('verse')}
           className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
             viewMode === 'verse'
-              ? 'bg-[#2f7f5c] text-white shadow-md'
+              ? 'bg-teal-700 text-white shadow-md'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
@@ -169,7 +159,7 @@ export function SurahDetail() {
           onClick={() => setViewMode('continuous')}
           className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
             viewMode === 'continuous'
-              ? 'bg-[#2f7f5c] text-white shadow-md'
+              ? 'bg-teal-700 text-white shadow-md'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
@@ -178,7 +168,6 @@ export function SurahDetail() {
         </button>
       </div>
 
-      {/* Ayahs Container - Verse by Verse View */}
       {viewMode === 'verse' && (
         <div className="space-y-4">
           {ayahs.map((ayah) => (
@@ -186,7 +175,6 @@ export function SurahDetail() {
               key={ayah.number}
               className="bg-white rounded-lg p-6 shadow-md border border-gray-100 hover:shadow-lg transition"
             >
-              {/* Ayah Number and Arabic Text */}
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -195,14 +183,13 @@ export function SurahDetail() {
                     </p>
                   </div>
                   <div className="ml-4 flex-shrink-0">
-                    <div className="bg-[#2f7f5c] text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-sm">
+                    <div className="bg-teal-700 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-sm">
                       {ayah.numberInSurah}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Ayah Reference */}
               <div className="text-xs text-gray-500 border-t pt-3">
                 <p>
                   Surah {surah.number}, Ayah {ayah.numberInSurah}
@@ -213,45 +200,45 @@ export function SurahDetail() {
         </div>
       )}
 
-      {/* Continuous Reading View */}
       {viewMode === 'continuous' && (
         <div className="bg-white rounded-lg p-12 shadow-md border border-gray-100">
           <div className="max-w-4xl mx-auto">
-            {/* Surah Title in Reading View */}
             <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-[#2f7f5c] mb-2">{surah.name}</h2>
+              <h2 className="text-4xl font-bold text-teal-700 mb-2">{surah.name}</h2>
               <p className="text-lg text-gray-700">{surah.englishName}</p>
               <p className="text-sm text-gray-600">{surah.englishNameTranslation}</p>
             </div>
 
-            {/* Bismillah - Large and Prominent */}
-            <div className="text-center mb-12 pb-8 border-b-2 border-[#2f7f5c]">
-              <p className="text-4xl font-bold text-[#2f7f5c] mb-4" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>
+            <div className="text-center mb-12 pb-8 border-b-2 border-teal-700">
+              <p
+                className="text-4xl font-bold text-teal-700 mb-4"
+                style={{ fontFamily: "'Amiri Quran', 'Amiri', serif" }}
+              >
                 بسم الله الرحمن الرحيم
               </p>
               <p className="text-gray-600 text-sm">In the name of Allah, the Most Gracious, the Most Merciful</p>
             </div>
 
-            {/* Ayahs - Book Style with Natural Text Wrapping */}
-            <div className="text-right leading-loose text-gray-800 break-words" style={{fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px`}}>
+            <div
+              className="text-right leading-loose text-gray-800 break-words"
+              style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px` }}
+            >
               {ayahs.map((ayah) => (
-                <span key={ayah.number} className="inline" style={{direction: 'rtl'}}>
+                <span key={ayah.number} className="inline" style={{ direction: 'rtl' }}>
                   {ayah.text}
                   <span className="relative inline-flex items-center justify-center mx-2 align-middle">
                     <svg className="w-7 h-7" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <circle cx="20" cy="20" r="18" className="text-[#2f7f5c]" />
-                      <circle cx="20" cy="20" r="12" opacity="0.3" className="text-[#2f7f5c]" />
+                      <circle cx="20" cy="20" r="18" className="text-teal-700" />
+                      <circle cx="20" cy="20" r="12" opacity="0.3" className="text-teal-700" />
                     </svg>
-                    <span className="absolute text-xs font-bold text-[#2f7f5c]" style={{fontFamily: 'sans-serif'}}>
+                    <span className="absolute text-xs font-bold text-teal-700" style={{ fontFamily: 'sans-serif' }}>
                       {ayah.numberInSurah}
                     </span>
-                  </span>
-                  {' '}
+                  </span>{' '}
                 </span>
               ))}
             </div>
 
-            {/* End of Surah */}
             <div className="text-center mt-12 border-t border-gray-300 pt-6">
               <p className="text-gray-600 text-sm">End of {surah.englishName}</p>
             </div>
@@ -259,38 +246,33 @@ export function SurahDetail() {
         </div>
       )}
 
-      {/* Floating Settings Button - Only in Reading Mode */}
       {viewMode === 'continuous' && (
         <>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="fixed bottom-6 right-6 bg-[#2f7f5c] hover:bg-[#1f5f46] text-white rounded-full p-4 shadow-lg transition z-40"
+            className="fixed bottom-6 right-6 bg-teal-700 hover:bg-teal-900 text-white rounded-full p-4 shadow-lg transition z-40"
           >
             <Settings size={24} />
           </button>
 
-          {/* Settings Panel */}
           {showSettings && (
             <div className="fixed bottom-24 right-6 bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[#2f7f5c]">Reading Settings</h3>
+                <h3 className="text-lg font-bold text-teal-700">Reading Settings</h3>
                 <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Font Size Control */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Font Size: {fontSize}px
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Font Size: {fontSize}px</label>
                 <input
                   type="range"
                   min="16"
                   max="48"
                   value={fontSize}
                   onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#2f7f5c]"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Small</span>
@@ -298,11 +280,8 @@ export function SurahDetail() {
                 </div>
               </div>
 
-              {/* Qira'at Selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Qira'at (Recitation Style)
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Qira'at (Recitation Style)</label>
                 <div className="space-y-2">
                   <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
                     <input
@@ -311,7 +290,7 @@ export function SurahDetail() {
                       value="hafs"
                       checked={qiraat === 'hafs'}
                       onChange={() => setQiraat('hafs')}
-                      className="mr-3 accent-[#2f7f5c]"
+                      className="mr-3 accent-teal-700"
                     />
                     <div>
                       <p className="font-semibold text-gray-800">Hafs (عن عاصم)</p>
@@ -325,7 +304,7 @@ export function SurahDetail() {
                       value="warsh"
                       checked={qiraat === 'warsh'}
                       onChange={() => setQiraat('warsh')}
-                      className="mr-3 accent-[#2f7f5c]"
+                      className="mr-3 accent-teal-700"
                     />
                     <div>
                       <p className="font-semibold text-gray-800">Warsh (عن نافع)</p>
@@ -339,11 +318,10 @@ export function SurahDetail() {
         </>
       )}
 
-      {/* Summary */}
       <div className="bg-[#f0f7f4] rounded-lg p-6 text-center">
         <p className="text-gray-700">
-          <span className="font-bold text-[#2f7f5c]">{surah.englishName}</span> contains{' '}
-          <span className="font-bold text-[#2f7f5c]">{surah.numberOfAyahs}</span> Ayahs
+          <span className="font-bold text-teal-700">{surah.englishName}</span> contains{' '}
+          <span className="font-bold text-teal-700">{surah.numberOfAyahs}</span> Ayahs
         </p>
       </div>
     </div>

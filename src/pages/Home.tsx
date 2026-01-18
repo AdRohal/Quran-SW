@@ -61,9 +61,14 @@ export function Home() {
             <span className="font-medium">{timezone ? timezone.split('/').join(', ') : 'Location'}</span>
           </div>
           <h1 className="text-4xl font-bold text-white mb-3">Find Peace in Remembrance</h1>
-          <p className="text-white/80 text-sm mb-6">
-            "Verily, in the remembrance of Allah do hearts find rest." (13:28)
-          </p>
+          <div className="mb-6">
+            <p className="text-white/80 text-sm mb-2">
+              "Verily, in the remembrance of Allah do hearts find rest." (13:28)
+            </p>
+            <p className="text-white/80 text-2xl text-right" style={{ fontFamily: "'Amiri Quran', serif" }}>
+              "إن بذكر الله تطمئن القلوب" (13:28)
+            </p>
+          </div>
           <div className="flex gap-3">
             <button className="bg-white text-primary font-medium px-6 py-2.5 rounded-full text-sm hover:bg-gray-100 transition">
               Continue Reading
@@ -82,24 +87,24 @@ export function Home() {
           return (
             <div
               key={prayer.name}
-              className={`flex-1 text-center py-8 px-4 rounded-3xl transition-all ${
+              className={`flex-1 text-center py-6 px-4 rounded-2xl transition-all ${
                 prayer.active
-                  ? 'bg-primary text-white border-4 border-primary shadow-lg'
+                  ? 'bg-teal-700 border-4 border-teal-700 shadow-lg'
                   : 'bg-white border-2 border-gray-200 shadow-sm'
               }`}
             >
               <IconComponent 
-                size={32} 
-                className={`mx-auto mb-4 ${
-                  prayer.active ? 'text-white' : 'text-gray-400'
+                size={24} 
+                className={`mx-auto mb-3 ${
+                  prayer.active ? 'text-white' : 'text-teal-700'
                 }`}
                 strokeWidth={1.5}
               />
-              <p className={`text-xs uppercase tracking-wider font-semibold mb-3 ${
-                prayer.active ? 'text-white/95' : 'text-gray-500'
+              <p className={`text-xs uppercase tracking-wider font-semibold mb-2 ${
+                prayer.active ? 'text-white' : 'text-teal-700'
               }`}>{prayer.name}</p>
-              <p className={`text-3xl font-bold ${
-                prayer.active ? 'text-white' : 'text-gray-900'
+              <p className={`text-3xl font-serif font-bold ${
+                prayer.active ? 'text-white' : 'text-teal-700'
               }`}>{loading ? '—' : prayer.time}</p>
             </div>
           )

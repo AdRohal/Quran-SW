@@ -10,9 +10,9 @@ module.exports = {
         foreground: "#000000",
         border: "#e5e7eb",
         primary: {
-          DEFAULT: "#2f7f5c",
-          light: "#3fa374",
-          dark: "#1f5f46",
+          DEFAULT: "#0d766e",
+          light: "#14918a",
+          dark: "#0a5c57",
         },
         secondary: {
           DEFAULT: "#8b5cf6",

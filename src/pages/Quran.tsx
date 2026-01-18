@@ -44,11 +44,11 @@ export function Quran() {
     return (
       <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
         <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
-          <h1 className="text-3xl font-bold text-[#2f7f5c] mb-1">The Noble Quran</h1>
-          <p className="text-[#6b8a78]">Read, Listen, and Memorize</p>
+          <h1 className="text-3xl font-bold text-teal-700 mb-1">The Noble Quran</h1>
+          <p className="text-teal-700">Read, Listen, and Memorize</p>
         </div>
         <div className="flex justify-center items-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#2f7f5c]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-700"></div>
         </div>
       </div>
     )
@@ -58,8 +58,8 @@ export function Quran() {
     return (
       <div className="space-y-6 pb-6 px-4 md:px-6 lg:px-10">
         <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
-          <h1 className="text-3xl font-bold text-[#2f7f5c] mb-1">The Noble Quran</h1>
-          <p className="text-[#6b8a78]">Read, Listen, and Memorize</p>
+          <h1 className="text-3xl font-bold text-teal-700 mb-1">The Noble Quran</h1>
+          <p className="text-teal-700">Read, Listen, and Memorize</p>
         </div>
         <div className="text-center text-red-600 p-8">
           <p>{error}</p>
@@ -73,8 +73,8 @@ export function Quran() {
       <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10">
         <div className="flex items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-[#2f7f5c] mb-1">The Noble Quran</h1>
-            <p className="text-[#6b8a78]">Read, Listen, and Memorize all {surahs.length} Surahs</p>
+            <h1 className="text-3xl font-bold text-teal-700 mb-1">The Noble Quran</h1>
+            <p className="text-teal-700">Read, Listen, and Memorize all {surahs.length} Surahs</p>
           </div>
           <div className="relative flex-shrink-0 w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -83,7 +83,7 @@ export function Quran() {
               placeholder="Search surah by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2f7f5c] focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent"
             />
           </div>
         </div>
@@ -105,7 +105,7 @@ export function Quran() {
           <div
             key={surah.number}
             onClick={() => navigate(`/quran/surah/${surah.number}`)}
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition cursor-pointer border border-gray-100 hover:border-[#2f7f5c]"
+            className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition cursor-pointer border border-gray-100 hover:border-teal-700"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
@@ -116,15 +116,15 @@ export function Quran() {
                 <p className="text-gray-600">{surah.englishNameTranslation}</p>
               </div>
               <div className="flex items-center gap-3">
-                <p className="text-3xl text-[#2f7f5c] font-bold" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>{surah.name}</p>
-                <div className="bg-gradient-to-br from-[#2f7f5c] to-[#1f5f46] text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-xl shadow-lg flex-shrink-0">
+                <p className="text-3xl text-teal-700 font-bold" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>{surah.name}</p>
+                <div className="bg-gradient-to-br from-teal-700 to-teal-900 text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-xl shadow-lg flex-shrink-0">
                   {surah.number}
                 </div>
               </div>
             </div>
             <div className="flex justify-between items-center text-sm text-gray-500">
               <span>{surah.numberOfAyahs} Ayahs</span>
-              <span className="text-[#2f7f5c] font-semibold">Read</span>
+              <span className="text-teal-700 font-semibold">Read</span>
             </div>
           </div>
         ))}
