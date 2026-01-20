@@ -9,10 +9,12 @@ interface RadioStation {
 interface RadioContextType {
   currentStation: RadioStation | null;
   isPlaying: boolean;
+  volume: number;
   playRadio: (station: RadioStation) => void;
   stopRadio: () => void;
   clearRadio: () => void;
   togglePlayPause: () => void;
+  setVolume: (volume: number) => void;
 }
 
 const RadioContext = createContext<RadioContextType | undefined>(undefined);
@@ -20,12 +22,18 @@ const RadioContext = createContext<RadioContextType | undefined>(undefined);
 export function RadioProvider({ children }: { children: ReactNode }) {
   const [currentStation, setCurrentStation] = useState<RadioStation | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolumeState] = useState(() => {
+    // Load volume from localStorage or default to 1
+    const cached = localStorage.getItem('radioVolume');
+    return cached ? Math.min(Math.max(parseFloat(cached), 0), 1) : 1;
+  });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio element on mount
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
+      audioRef.current.volume = volume;
       audioRef.current.addEventListener('ended', () => {
         setIsPlaying(false);
       });
@@ -40,6 +48,19 @@ export function RadioProvider({ children }: { children: ReactNode }) {
       }
     };
   }, []);
+
+  // Update audio volume when volume state changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      localStorage.setItem('radioVolume', volume.toString());
+    }
+  }, [volume]);
+
+  const setVolume = (newVolume: number) => {
+    const clampedVolume = Math.min(Math.max(newVolume, 0), 1);
+    setVolumeState(clampedVolume);
+  };
 
   const playRadio = (station: RadioStation) => {
     if (audioRef.current) {
@@ -94,7 +115,7 @@ export function RadioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <RadioContext.Provider value={{ currentStation, isPlaying, playRadio, stopRadio, clearRadio, togglePlayPause }}>
+    <RadioContext.Provider value={{ currentStation, isPlaying, volume, playRadio, stopRadio, clearRadio, togglePlayPause, setVolume }}>
       {children}
     </RadioContext.Provider>
   );

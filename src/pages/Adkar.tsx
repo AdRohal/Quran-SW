@@ -18,6 +18,7 @@ interface AdkarCategory {
 }
 
 type CategoryKey = 'morning' | 'evening' | 'sleep' | 'after_prayer';
+type TimeOfDay = 'morning' | 'evening' | 'night' | 'after_prayer';
 
 const CATEGORY_MAP: Record<CategoryKey, { title: string; icon: typeof Sunrise; arabic: string; apiId: number }> = {
   morning: { title: 'Morning Adkar', icon: Sunrise, arabic: 'أذكار الصباح', apiId: 1 },
@@ -26,12 +27,61 @@ const CATEGORY_MAP: Record<CategoryKey, { title: string; icon: typeof Sunrise; a
   after_prayer: { title: 'After Prayer', icon: BookOpen, arabic: 'أذكار الصلاة', apiId: 4 },
 };
 
+// Protection supplications for daily rotation
+const PROTECTION_SUPPLICATIONS = [
+  {
+    text: 'بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ',
+    translation: 'In the Name of Allah, who with His Name nothing on earth or in the heaven can cause harm, and He is the All-Hearing, the All-Knowing.',
+    source: 'Abu Dawud',
+    count: 3
+  },
+  {
+    text: 'أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+    translation: 'I seek refuge in the Perfect Words of Allah from the evil of what He has created.',
+    source: 'At-Tirmidhi',
+    count: 3
+  }
+];
+
 export function Adkar() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
   const [adkarData, setAdkarData] = useState<Zikr[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedCounts, setCompletedCounts] = useState<Record<number, number>>({});
+  const [currentTimeOfDay, setCurrentTimeOfDay] = useState<TimeOfDay>('morning');
+  const [protectionIndex, setProtectionIndex] = useState(0);
+
+  // Determine time of day based on current hour
+  useEffect(() => {
+    const updateTimeOfDay = () => {
+      const hour = new Date().getHours();
+      let timeOfDay: TimeOfDay;
+      
+      if (hour >= 5 && hour < 12) {
+        timeOfDay = 'morning';
+      } else if (hour >= 12 && hour < 17) {
+        timeOfDay = 'evening';
+      } else if (hour >= 17 && hour < 21) {
+        timeOfDay = 'evening';
+      } else {
+        timeOfDay = 'night';
+      }
+      
+      setCurrentTimeOfDay(timeOfDay);
+      
+      // Update protection index based on time (2 times per day: morning half and evening half)
+      if (hour >= 5 && hour < 16) {
+        setProtectionIndex(0);
+      } else {
+        setProtectionIndex(1);
+      }
+    };
+    
+    updateTimeOfDay();
+    const interval = setInterval(updateTimeOfDay, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchAdkar = async (category: CategoryKey) => {
     setLoading(true);
@@ -303,45 +353,91 @@ export function Adkar() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Featured Supplications</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Morning Card - Teal background */}
-            <div className="bg-teal-700 rounded-2xl p-6 text-white">
-              <span className="inline-block bg-teal-600 text-white text-xs font-semibold px-3 py-1 rounded mb-4">
-                Morning
-              </span>
-              <p 
-                className="text-2xl text-right leading-relaxed mb-6" 
-                style={{ fontFamily: 'Amiri Quran, Amiri, serif' }}
-                dir="rtl"
-              >
-                اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا ، وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ
-              </p>
-              <p className="text-white/80 italic text-sm mb-6">
-                "O Allah, by You we enter the morning and by You we enter the evening, by You we live and by You we die, and to You is the Final Return."
-              </p>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/70">Recite 1x</span>
-                <span className="text-white/70">Sahih Al-Bukhari</span>
+            {/* Time-based Adkar Card */}
+            {currentTimeOfDay === 'morning' && (
+              <div className="bg-yellow-600 rounded-2xl p-6 text-white">
+                <span className="inline-block bg-yellow-700 text-white text-xs font-semibold px-3 py-1 rounded mb-4">
+                  Morning
+                </span>
+                <p 
+                  className="text-2xl text-right leading-relaxed mb-6" 
+                  style={{ fontFamily: 'Amiri Quran, Amiri, serif' }}
+                  dir="rtl"
+                >
+                  اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا ، وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ
+                </p>
+                <p className="text-white/80 italic text-sm mb-6">
+                  "O Allah, by You we enter the morning and by You we enter the evening, by You we live and by You we die, and to You is the Final Return."
+                </p>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/70">Recite 1x</span>
+                  <span className="text-white/70">Sahih Al-Bukhari</span>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {currentTimeOfDay === 'evening' && (
+              <div className="bg-orange-600 rounded-2xl p-6 text-white">
+                <span className="inline-block bg-orange-700 text-white text-xs font-semibold px-3 py-1 rounded mb-4">
+                  Evening
+                </span>
+                <p 
+                  className="text-2xl text-right leading-relaxed mb-6" 
+                  style={{ fontFamily: 'Amiri Quran, Amiri, serif' }}
+                  dir="rtl"
+                >
+                  اللَّهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ
+                </p>
+                <p className="text-white/80 italic text-sm mb-6">
+                  "O Allah, by You we enter the evening and by You we enter the morning, by You we live and by You we die, and to You is the return."
+                </p>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/70">Recite 1x</span>
+                  <span className="text-white/70">Sahih Al-Bukhari</span>
+                </div>
+              </div>
+            )}
+            
+            {currentTimeOfDay === 'night' && (
+              <div className="bg-indigo-700 rounded-2xl p-6 text-white">
+                <span className="inline-block bg-indigo-800 text-white text-xs font-semibold px-3 py-1 rounded mb-4">
+                  Night
+                </span>
+                <p 
+                  className="text-2xl text-right leading-relaxed mb-6" 
+                  style={{ fontFamily: 'Amiri Quran, Amiri, serif' }}
+                  dir="rtl"
+                >
+                  بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا
+                </p>
+                <p className="text-white/80 italic text-sm mb-6">
+                  "By Your Name, O Allah, I die and I live."
+                </p>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/70">Recite before sleep</span>
+                  <span className="text-white/70">Sahih Al-Bukhari</span>
+                </div>
+              </div>
+            )}
 
-            {/* Protection Card - White background */}
+            {/* Protection Card - Rotates Daily */}
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
               <span className="inline-block bg-teal-50 text-teal-700 text-xs font-semibold px-3 py-1 rounded mb-4">
-                Protection
+                Protection (Day {protectionIndex === 0 ? '1' : '2'})
               </span>
               <p 
                 className="text-2xl text-teal-700 text-right leading-relaxed mb-6" 
                 style={{ fontFamily: 'Amiri Quran, Amiri, serif' }}
                 dir="rtl"
               >
-                بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ
+                {PROTECTION_SUPPLICATIONS[protectionIndex].text}
               </p>
               <p className="text-gray-600 italic text-sm mb-6">
-                "In the Name of Allah, who with His Name nothing on earth or in the heaven can cause harm, and He is the All-Hearing, the All-Knowing."
+                "{PROTECTION_SUPPLICATIONS[protectionIndex].translation}"
               </p>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Recite 3x</span>
-                <span className="text-teal-700">Abu Dawud</span>
+                <span className="text-gray-500">Recite {PROTECTION_SUPPLICATIONS[protectionIndex].count}x</span>
+                <span className="text-teal-700">{PROTECTION_SUPPLICATIONS[protectionIndex].source}</span>
               </div>
             </div>
           </div>
