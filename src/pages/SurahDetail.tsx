@@ -1,6 +1,6 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileText, Settings, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2 } from 'lucide-react'
 
 interface Ayah {
   number: number
@@ -20,6 +20,30 @@ interface Surah {
 type ViewMode = 'verse' | 'continuous'
 type Qiraat = 'hafs' | 'warsh'
 
+interface Reciter {
+  id: number
+  name: string
+  recitationId: number
+}
+
+interface WordTiming {
+  verse_number: number
+  timestamp_from: number
+  timestamp_to: number
+}
+
+const RECITERS: Reciter[] = [
+  { id: 1, name: 'Abdul Basit (Mujawwad)', recitationId: 1 },
+  { id: 2, name: 'Abdul Basit (Murattal)', recitationId: 2 },
+  { id: 3, name: 'Abdullah Al Juhany', recitationId: 3 },
+  { id: 4, name: 'Abu Bakr Al Shatri', recitationId: 4 },
+  { id: 5, name: 'Abu Bakr Al Shatri 2', recitationId: 5 },
+  { id: 6, name: 'Ali Al Hudhaifi', recitationId: 6 },
+  { id: 7, name: 'Mishari Rashid Al Afasy', recitationId: 7 },
+  { id: 8, name: 'Maher Al Meaqli', recitationId: 8 },
+  { id: 9, name: 'Muhammad Ayyub', recitationId: 22 },
+]
+
 export function SurahDetail() {
   const { surahNumber } = useParams<{ surahNumber: string }>()
   const navigate = useNavigate()
@@ -31,6 +55,13 @@ export function SurahDetail() {
   const [showSettings, setShowSettings] = useState(false)
   const [fontSize, setFontSize] = useState(30)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
+  const [selectedReciter, setSelectedReciter] = useState<number>(1)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentAyahPlaying, setCurrentAyahPlaying] = useState<number | null>(null)
+  const [showReciterMenu, setShowReciterMenu] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const isPlayingSequenceRef = useRef<boolean>(false)
+  const currentVerseIndexRef = useRef<number>(0)
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
@@ -85,6 +116,134 @@ export function SurahDetail() {
     fetchSurahDetail()
   }, [surahNumber, qiraat])
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (updateIntervalRef.current) clearInterval(updateIntervalRef.current)
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {})
+      }
+    }
+  }, [])
+
+  const playAyah = async () => {
+    if (!audioRef.current || !surah || ayahs.length === 0) return
+
+    try {
+      isPlayingSequenceRef.current = true
+      currentVerseIndexRef.current = 0
+      setIsPlaying(true)
+      
+      // Set up auto-play next verse when current ends
+      audioRef.current.onended = () => {
+        currentVerseIndexRef.current += 1
+        console.log(`✓ Verse ended, next verse index: ${currentVerseIndexRef.current}`)
+        
+        if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
+          // Play next verse immediately without waiting for state updates
+          playVerseByIndex(currentVerseIndexRef.current)
+        } else {
+          // Finished all verses
+          isPlayingSequenceRef.current = false
+          setIsPlaying(false)
+          setCurrentAyahPlaying(null)
+          console.log('✅ Finished surah!')
+        }
+      }
+
+      // Play first verse
+      console.log('▶ Starting surah playback...')
+      playVerseByIndex(0)
+    } catch (err) {
+      console.error('Error starting playback:', err)
+      setIsPlaying(false)
+      setCurrentAyahPlaying(null)
+      isPlayingSequenceRef.current = false
+    }
+  }
+
+  // Play verse by specific index - NO state dependencies!
+  const playVerseByIndex = async (verseIndex: number) => {
+    if (!audioRef.current || !surah || !isPlayingSequenceRef.current) return
+    
+    if (verseIndex >= ayahs.length) {
+      // Finished
+      isPlayingSequenceRef.current = false
+      setIsPlaying(false)
+      setCurrentAyahPlaying(null)
+      return
+    }
+
+    try {
+      const reciter = RECITERS.find((r) => r.id === selectedReciter)
+      if (!reciter) return
+
+      const currentAyah = ayahs[verseIndex]
+      
+      // Map reciter ID to everyayah.com folder names
+      const reciterFolders: Record<number, string> = {
+        1: 'Abdul_Basit_Mujawwad_128kbps',
+        2: 'Abdul_Basit_Murattal_192kbps',
+        3: 'Abdurrahmaan_As-Sudais_192kbps',
+        4: 'Abu_Bakr_Ash-Shaatree_128kbps',
+        5: 'Abu_Bakr_Ash-Shaatree_128kbps',
+        6: 'Hudhaify_128kbps',
+        7: 'Alafasy_128kbps',
+        8: 'MaherAlMuaiqly128kbps',
+        9: 'muhammed_ayyoub_128kbps'
+      }
+      
+      const folder = reciterFolders[reciter.id] || reciterFolders[1]
+      const chapterPadded = String(surah.number).padStart(3, '0')
+      const versePadded = String(currentAyah.numberInSurah).padStart(3, '0')
+      const audioUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${versePadded}.mp3`
+      
+      console.log(`🎵 Verse ${verseIndex + 1}/${ayahs.length}`)
+      
+      // Highlight immediately
+      setCurrentAyahPlaying(currentAyah.numberInSurah)
+      
+      // Play
+      audioRef.current.src = audioUrl
+      audioRef.current.crossOrigin = 'anonymous'
+      await audioRef.current.play()
+    } catch (err) {
+      console.error('Error playing verse:', err)
+      // Auto-advance on error
+      currentVerseIndexRef.current += 1
+      if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
+        playVerseByIndex(currentVerseIndexRef.current)
+      } else {
+        isPlayingSequenceRef.current = false
+        setIsPlaying(false)
+      }
+    }
+  }
+
+  const handleAudioEnded = () => {
+    // Fallback handler (should not fire during sequential playback because we override onended)
+    isPlayingSequenceRef.current = false
+    currentVerseIndexRef.current = 0
+    setIsPlaying(false)
+    setCurrentAyahPlaying(null)
+    console.log('✓ Finished playing surah')
+  }
+
+  const playSurahContinuous = () => {
+    if (ayahs.length === 0) return
+
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause()
+      isPlayingSequenceRef.current = false
+      setIsPlaying(false)
+      setCurrentAyahPlaying(null)
+      return
+    }
+
+    playAyah()
+  }
+
   if (loading) {
     return (
       <div className="space-y-6 pb-6">
@@ -129,60 +288,137 @@ export function SurahDetail() {
         Back to Quran
       </button>
 
-      <div className="bg-gradient-to-r from-teal-700 to-teal-900 rounded-xl p-8 shadow-lg text-white sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">{surah.englishName}</h1>
-            <p className="text-lg opacity-90">{surah.englishNameTranslation}</p>
-            <p className="text-sm opacity-75 mt-1">{surah.revelationType}</p>
+      <div className="sticky top-0 z-20 bg-white shadow-lg">
+        <div className="bg-gradient-to-r from-teal-700 to-teal-900 p-8 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">{surah.englishName}</h1>
+              <p className="text-lg opacity-90">{surah.englishNameTranslation}</p>
+              <p className="text-sm opacity-75 mt-1">{surah.revelationType}</p>
+            </div>
+            <div>
+              <p className="text-6xl font-bold opacity-70">{surah.name}</p>
+              <p className="text-sm opacity-75 mt-2">Surah {surah.number}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-6xl font-bold opacity-70">{surah.name}</p>
-            <p className="text-sm opacity-75 mt-2">Surah {surah.number}</p>
+        </div>
+
+        <div className="flex gap-2 justify-center bg-white py-2 px-4 border-b border-gray-200">
+          <button
+            onClick={() => setViewMode('verse')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
+              viewMode === 'verse'
+                ? 'bg-teal-700 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <BookOpen size={18} />
+            Verse by Verse
+          </button>
+          <button
+            onClick={() => setViewMode('continuous')}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
+              viewMode === 'continuous'
+                ? 'bg-teal-700 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <FileText size={18} />
+            Full Reading
+          </button>
+        </div>
+
+        {/* Audio Player Section */}
+        <div className="bg-gradient-to-r from-teal-600 to-teal-800 p-6 text-white">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1">
+            <button
+              onClick={() => setShowReciterMenu(!showReciterMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-teal-700 rounded-lg font-semibold hover:bg-gray-100 transition"
+            >
+              <Volume2 size={20} />
+              {RECITERS.find((r) => r.id === selectedReciter)?.name || 'Select Reciter'}
+            </button>
+
+            {viewMode === 'continuous' && (
+              <button
+                onClick={playSurahContinuous}
+                className="flex items-center gap-2 px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition"
+              >
+                {isPlaying ? (
+                  <>
+                    <Pause size={20} />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <Play size={20} />
+                    Play Surah
+                  </>
+                )}
+              </button>
+            )}
           </div>
+        </div>
+
+          {showReciterMenu && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {RECITERS.map((reciter) => (
+                <button
+                  key={reciter.id}
+                  onClick={() => {
+                    setSelectedReciter(reciter.id)
+                    setShowReciterMenu(false)
+                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    selectedReciter === reciter.id
+                      ? 'bg-green-500 text-white'
+                      : 'bg-teal-700 text-white hover:bg-teal-600'
+                  }`}
+                >
+                  {reciter.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-2 justify-center sticky top-32 z-10 bg-white py-2">
-        <button
-          onClick={() => setViewMode('verse')}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
-            viewMode === 'verse'
-              ? 'bg-teal-700 text-white shadow-md'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <BookOpen size={18} />
-          Verse by Verse
-        </button>
-        <button
-          onClick={() => setViewMode('continuous')}
-          className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold transition ${
-            viewMode === 'continuous'
-              ? 'bg-teal-700 text-white shadow-md'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FileText size={18} />
-          Full Reading
-        </button>
-      </div>
+      <audio ref={audioRef} />
 
       {viewMode === 'verse' && (
         <div className="space-y-4">
           {ayahs.map((ayah) => (
             <div
               key={ayah.number}
-              className="bg-white rounded-lg p-6 shadow-md border border-gray-100 hover:shadow-lg transition"
+              className={`bg-white rounded-lg p-6 shadow-md border transition ${
+                currentAyahPlaying === ayah.number
+                  ? 'border-green-500 bg-green-50 shadow-lg'
+                  : 'border-gray-100 hover:shadow-lg'
+              }`}
             >
               <div className="mb-4">
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-4 gap-4">
                   <div className="flex-1">
                     <p className="text-right text-2xl leading-relaxed text-gray-800 font-semibold">
                       {ayah.text}
                     </p>
                   </div>
-                  <div className="ml-4 flex-shrink-0">
+                  <div className="ml-4 flex-shrink-0 flex items-center gap-3">
+                    <button
+                      onClick={() => playAyah()}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition ${
+                        currentAyahPlaying === ayah.number && isPlaying
+                          ? 'bg-green-600 text-white'
+                          : 'bg-teal-700 text-white hover:bg-teal-800'
+                      }`}
+                    >
+                      {currentAyahPlaying === ayah.number && isPlaying ? (
+                        <Pause size={18} />
+                      ) : (
+                        <Play size={18} />
+                      )}
+                    </button>
                     <div className="bg-teal-700 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-sm">
                       {ayah.numberInSurah}
                     </div>
@@ -224,7 +460,15 @@ export function SurahDetail() {
               style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px` }}
             >
               {ayahs.map((ayah) => (
-                <span key={ayah.number} className="inline" style={{ direction: 'rtl' }}>
+                <span
+                  key={ayah.number}
+                  className={`inline transition-all duration-100 rounded px-2 py-1 ${
+                    currentAyahPlaying === ayah.numberInSurah && isPlaying
+                      ? 'bg-yellow-300 text-gray-900 font-bold shadow-md'
+                      : ''
+                  }`}
+                  style={{ direction: 'rtl' }}
+                >
                   {ayah.text}
                   <span className="relative inline-flex items-center justify-center mx-2 align-middle">
                     <svg className="w-7 h-7" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.5">
