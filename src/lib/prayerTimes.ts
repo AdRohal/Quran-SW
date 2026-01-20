@@ -1,6 +1,12 @@
 export type CalculationMethod = 2 | 3 | 4 | 5; // ISNA | MWL | Umm Al-Qura | Egypt
 export type School = 0 | 1; // 0: Shafi, 1: Hanafi
 
+export interface HijriDate {
+  hy: number;
+  hm: number;
+  hd: number;
+}
+
 export interface TimingsResponse {
   code: number;
   status: string;
@@ -9,6 +15,21 @@ export interface TimingsResponse {
     date: {
       readable: string;
       timestamp: string;
+      hijri?: {
+        date: string;
+        format: string;
+        day: string;
+        weekday: {
+          en: string;
+          ar: string;
+        };
+        month: {
+          number: number;
+          en: string;
+          ar: string;
+        };
+        year: string;
+      };
     };
     meta: {
       timezone: string;
@@ -27,6 +48,7 @@ export interface PrayerTimesResult {
   methodName: string;
   latitude: number;
   longitude: number;
+  hijri?: HijriDate;
 }
 
 export async function getPrayerTimesByCoords(
@@ -55,6 +77,17 @@ export async function getPrayerTimesByCoords(
   }
 
   const { timings, date, meta } = json.data;
+  
+  // Extract Hijri date from API response
+  let hijri: HijriDate | undefined
+  if (date.hijri) {
+    hijri = {
+      hy: parseInt(date.hijri.year),
+      hm: date.hijri.month.number,
+      hd: parseInt(date.hijri.day)
+    }
+  }
+  
   return {
     timings,
     dateReadable: date.readable,
@@ -62,6 +95,7 @@ export async function getPrayerTimesByCoords(
     methodName: json.data.meta.method?.name ?? 'Unknown',
     latitude: meta.latitude,
     longitude: meta.longitude,
+    hijri,
   };
 }
 

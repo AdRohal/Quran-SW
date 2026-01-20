@@ -20,7 +20,7 @@ function App() {
     <AuthProvider>
       <RadioProvider>
         <LiveProvider>
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <div className="flex min-h-screen bg-white">
               <Navigation />
               <main className="flex-1 md:ml-56 p-4 md:p-6">

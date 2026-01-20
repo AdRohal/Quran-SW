@@ -1,0 +1,68 @@
+import express from 'express';
+import cors from 'cors';
+import fetch from 'node-fetch';
+
+const app = express();
+const PORT = 3001;
+
+// Enable CORS for all routes
+app.use(cors());
+
+// Route to proxy Quran audio
+app.get('/api/quran/audio/:ayahNumber', async (req, res) => {
+  try {
+    const { ayahNumber } = req.params;
+    
+    console.log(`\n📢 Audio request received for ayah: ${ayahNumber}`);
+    
+    // Validate ayah number
+    if (!ayahNumber || isNaN(ayahNumber)) {
+      console.error(`❌ Invalid ayah number: ${ayahNumber}`);
+      return res.status(400).json({ error: 'Invalid ayah number' });
+    }
+
+    // Fetch audio from Islamic Network CDN
+    const audioUrl = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayahNumber}.mp3`;
+    
+    console.log(`🔗 Fetching from CDN: ${audioUrl}`);
+    
+    const response = await fetch(audioUrl);
+    
+    console.log(`📡 CDN Response status: ${response.status}`);
+    
+    if (!response.ok) {
+      console.error(`❌ CDN Error: ${response.status} ${response.statusText}`);
+      return res.status(response.status).json({ error: `Failed to fetch audio: ${response.statusText}` });
+    }
+
+    // Set proper headers for audio streaming
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Accept-Ranges', 'bytes');
+    
+    // Convert to buffer and send
+    const buffer = await response.buffer();
+    console.log(`✅ Sending audio buffer: ${buffer.length} bytes`);
+    res.send(buffer);
+    
+  } catch (error) {
+    console.error('❌ Proxy error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch audio', message: error.message });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Audio proxy server is running' });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Quran Audio Proxy Server', endpoints: ['/api/health', '/api/quran/audio/:ayahNumber'] });
+});
+
+app.listen(PORT, () => {
+  console.log(`🎵 Audio proxy server running on http://localhost:${PORT}`);
+  console.log(`📡 API endpoint: http://localhost:${PORT}/api/quran/audio/:ayahNumber`);
+});

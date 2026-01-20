@@ -1,15 +1,12 @@
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { ISLAMIC_HOLIDAYS_DATA } from '../lib/quran'
 
 interface HijriDay {
   date: string
   islamic: string
   gregorian: string
   dayOfWeek: string
-}
-
-interface CalendarMonth {
-  days: HijriDay[]
 }
 
 // Convert numbers to Arabic words for dates
@@ -29,14 +26,13 @@ const numberToArabicWord = (num: number): string => {
   return `${ones[one]} و${tens[ten]}`
 }
 
-const ISLAMIC_HOLIDAYS_FULL = [
-  { name: 'Ramadan Begins', arabicName: 'بداية رمضان', month: 9, day: 1, type: 'Major' },
-  { name: 'Eid al-Fitr', arabicName: 'عيد الفطر', month: 10, day: 1, type: 'Major' },
-  { name: 'Day of Arafah', arabicName: 'يوم عرفة', month: 12, day: 9, type: 'Major' },
-  { name: 'Eid al-Adha', arabicName: 'عيد الأضحى', month: 12, day: 10, type: 'Major' },
-  { name: 'Islamic New Year', arabicName: 'السنة الهجرية الجديدة', month: 1, day: 1, type: 'Important' },
-  { name: 'Mawlid an-Nabi', arabicName: 'مولد النبي', month: 3, day: 12, type: 'Important' },
-]
+const ISLAMIC_HOLIDAYS_FULL = ISLAMIC_HOLIDAYS_DATA.map(h => ({
+  name: h.name,
+  arabicName: h.arabicName,
+  month: h.hijri.month,
+  day: h.hijri.day,
+  type: h.type,
+}))
 
 export function Calendar() {
   const [currentHijri, setCurrentHijri] = useState({ year: 1447, month: 7 })
@@ -48,14 +44,30 @@ export function Calendar() {
   useEffect(() => {
     const fetchTodayDate = async () => {
       try {
-        const res = await fetch('https://api.aladhan.com/v1/convert?date=18-01-2026&correction=false&method=3')
+        const today = new Date()
+        const day = String(today.getDate()).padStart(2, '0')
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const year = today.getFullYear()
+        // Use dash format for Aladhan API (DD-MM-YYYY)
+        const dateStr = `${day}-${month}-${year}`
+
+        const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`)
+        if (!res.ok) throw new Error(`API returned ${res.status}`)
+        
         const data = await res.json()
-        const hijri = data.data.hijri
-        setToday({ year: hijri.year, month: hijri.month.number, day: hijri.day })
-        setCurrentHijri({ year: hijri.year, month: hijri.month.number })
+        if (data.data?.hijri) {
+          const hijri = data.data.hijri
+          const hijriDay = parseInt(hijri.day, 10)
+          setToday({ year: hijri.year, month: hijri.month.number, day: isNaN(hijriDay) ? 1 : hijriDay })
+          setCurrentHijri({ year: hijri.year, month: hijri.month.number })
+        } else {
+          throw new Error('Invalid API response')
+        }
       } catch (error) {
         console.warn('Failed to fetch today date:', error)
-        setToday({ year: 1447, month: 7, day: 27 })
+        // Graceful fallback: keep current state but compute Gregorian today
+        const todayDate = new Date()
+        setToday({ year: currentHijri.year, month: currentHijri.month, day: todayDate.getDate() })
       }
     }
     fetchTodayDate()
@@ -66,27 +78,63 @@ export function Calendar() {
     const fetchCalendar = async () => {
       try {
         setLoading(true)
-        const res = await fetch(
-          `https://api.aladhan.com/v1/hijri/${currentHijri.year}/${currentHijri.month}?adjustment=0`
-        )
-        const data = await res.json()
-        
-        if (data.data && Array.isArray(data.data)) {
-          const days: HijriDay[] = data.data.map((item: any) => ({
-            date: item.date.hijri,
-            islamic: `${item.date.hijri}`,
-            gregorian: `${item.date.gregorian}`,
-            dayOfWeek: item.meta.dayOfWeek || 'N/A',
-          }))
-          setCalendarDays(days)
+        // Step 1: convert the 1st of the Hijri month to Gregorian to anchor the span
+        const anchorRes = await fetch(`https://api.aladhan.com/v1/hToG?date=01-${currentHijri.month}-${currentHijri.year}`)
+        if (!anchorRes.ok) throw new Error(`Anchor convert failed ${anchorRes.status}`)
+        const anchorData = await anchorRes.json()
+        const anchorG = anchorData.data?.gregorian
+        if (!anchorG) throw new Error('Invalid anchor response')
+
+        const gMonth = anchorG.month.number
+        const gYear = anchorG.year
+
+        // Step 2: fetch two Gregorian months to cover overlap
+        const targets = [
+          { month: gMonth, year: gYear },
+          { month: gMonth === 12 ? 1 : gMonth + 1, year: gMonth === 12 ? gYear + 1 : gYear },
+        ]
+
+        const monthPromises = targets.map(t => fetch(`https://api.aladhan.com/v1/gToHCalendar?month=${t.month}&year=${t.year}`))
+        const monthResponses = await Promise.all(monthPromises)
+        const monthData: any[] = []
+        for (const res of monthResponses) {
+          if (res.ok) {
+            const json = await res.json()
+            if (Array.isArray(json.data)) monthData.push(...json.data)
+          }
         }
+
+        if (monthData.length === 0) throw new Error('No days found for month')
+
+        // Map and filter to the target Hijri month/year
+        const days: HijriDay[] = monthData
+          .map((d: any) => {
+            const h = d.hijri
+            const g = d.gregorian
+            const gDateStr = `${g.year}-${String(g.month.number).padStart(2, '0')}-${String(g.day).padStart(2, '0')}`
+            const weekday = g.weekday?.en ?? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(gDateStr).getDay()]
+            return {
+              date: `${h.day}/${h.month.number}/${h.year}`,
+              islamic: `${h.day}/${h.month.number}/${h.year}`,
+              gregorian: gDateStr,
+              dayOfWeek: weekday,
+            }
+          })
+          .filter((d: HijriDay) => {
+            const parts = d.islamic.split('/')
+            const monthStr = parts[1]
+            const yearStr = parts[2]
+            return parseInt(monthStr, 10) === currentHijri.month && parseInt(yearStr, 10) === currentHijri.year
+          })
+
+        setCalendarDays(days)
       } catch (error) {
         console.warn('Failed to fetch calendar:', error)
-        // Fallback: generate placeholder days
-        setCalendarDays(Array.from({ length: 30 }, (_, i) => ({
+        // Fallback: show 29 days without Gregorian mapping to avoid incorrect data
+        setCalendarDays(Array.from({ length: 29 }, (_, i) => ({
           date: `${i + 1}/${currentHijri.month}/${currentHijri.year}`,
-          islamic: String(i + 1),
-          gregorian: `2026-02-${String(i + 1).padStart(2, '0')}`,
+          islamic: `${i + 1}/${currentHijri.month}/${currentHijri.year}`,
+          gregorian: '',
           dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i % 7],
         })))
       } finally {
@@ -156,7 +204,7 @@ export function Calendar() {
               {monthArabicNames[currentHijri.month - 1]}
             </p>
             <p className="text-white/80 text-sm">
-              Year {currentHijri.year} AH / 2026 CE
+              Year {currentHijri.year} AH / {new Date().getFullYear()} CE
             </p>
           </div>
 
@@ -210,12 +258,12 @@ export function Calendar() {
             const dayNum = parseInt(day.islamic.split('/')[0])
             const todayFlag = isToday(dayNum)
             const holidayFlag = isHoliday(dayNum)
-            const holiday = getHolidayInfo(dayNum)
+            const holiday = holidayFlag ? getHolidayInfo(dayNum) : null
 
             return (
               <div
                 key={idx}
-                className={`aspect-square rounded-2xl p-3 flex flex-col items-center justify-center text-center transition-all group cursor-pointer
+                className={`aspect-square rounded-2xl p-3 flex flex-col items-center justify-center text-center transition-all group cursor-pointer relative
                   ${todayFlag
                     ? 'bg-teal-700 text-white shadow-lg ring-2 ring-teal-300'
                     : holidayFlag
@@ -223,6 +271,11 @@ export function Calendar() {
                     : 'bg-white border border-gray-200 text-gray-800 hover:shadow-md'
                 }`}
               >
+                {holiday && (
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    {holiday.name}
+                  </div>
+                )}
                 <p className="font-bold text-lg">{dayNum}</p>
                 <p className="text-[10px] text-current/70 mt-1 opacity-75">{day.dayOfWeek}</p>
                 {todayFlag && <div className="mt-1 w-1.5 h-1.5 rounded-full bg-white" />}
@@ -239,7 +292,7 @@ export function Calendar() {
       <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <CalendarDays className="w-6 h-6 text-teal-700" />
-          Major Islamic Holidays (1447 AH)
+          Major Islamic Holidays ({currentHijri.year} AH)
         </h3>
         <div className="grid sm:grid-cols-2 gap-4">
           {ISLAMIC_HOLIDAYS_FULL.map((holiday) => (
@@ -279,7 +332,14 @@ export function Calendar() {
       {/* Footer Info */}
       <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 text-center">
         <p className="text-gray-700 text-sm">
-          Today is <span className="font-bold text-teal-700">Rajab {today?.day || 27}, 1447 AH</span> (January 18, 2026 CE)
+          {today ? (
+            <>
+              Today is <span className="font-bold text-teal-700">{monthNames[today.month - 1]} {today.day}, {today.year} AH</span> (
+              {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} CE)
+            </>
+          ) : (
+            <>Loading today…</>
+          )}
         </p>
         <p style={{ fontFamily: 'var(--font-arabic)' }} className="text-teal-700 mt-2">
           {today && `اليوم ${numberToArabicWord(today.day)} من ${monthArabicNames[today.month - 1]} سنة ${today.year} هـ`}

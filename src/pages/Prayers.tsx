@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Cloud, Sun, CloudRain, Moon, Settings, Navigation, MapPin, Calendar, Bell, Sunrise, Sunset } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { Sun, Moon, Settings, Navigation, MapPin, Calendar, Bell, BellOff, Sunrise, Sunset } from 'lucide-react';
 import {
   METHOD_OPTIONS,
   SCHOOL_OPTIONS,
@@ -7,7 +7,8 @@ import {
   getCurrentPosition,
   getPrayerTimesByCoords,
 } from '../lib/prayerTimes';
-import mosqueImage from '../public/peaceful_mosque_courtyard_at_sunset.png';
+import { getAdhanAudio, requestNotificationPermission, showPrayerNotification } from '../lib/quran';
+import { QiblaFinder } from '../components/QiblaFinder';
 
 type MethodValue = (typeof METHOD_OPTIONS)[number]['value'];
 type SchoolValue = (typeof SCHOOL_OPTIONS)[number]['value'];
@@ -26,12 +27,30 @@ export function Prayers() {
   const [method, setMethod] = useState<MethodValue>(3);
   const [school, setSchool] = useState<SchoolValue>(0);
   const [timings, setTimings] = useState<Record<string, string> | null>(null);
-  const [timezone, setTimezone] = useState('');
   const [dateReadable, setDateReadable] = useState('');
+  const [qiblaFinderOpen, setQiblaFinderOpen] = useState(false);
   const [next, setNext] = useState<ReturnType<typeof computeNextPrayer> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [disabledNotifications, setDisabledNotifications] = useState<Set<string>>(() => {
+    // Load from localStorage on initialization
+    const cached = localStorage.getItem('disabledPrayerNotifications');
+    if (cached) {
+      try {
+        return new Set(JSON.parse(cached));
+      } catch {
+        return new Set();
+      }
+    }
+    return new Set();
+  });
+  const adhanAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Save disabled notifications to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('disabledPrayerNotifications', JSON.stringify(Array.from(disabledNotifications)));
+  }, [disabledNotifications]);
 
   useEffect(() => {
     // Try to get geolocation on mount
@@ -39,6 +58,8 @@ export function Prayers() {
       try {
         const pos = await getCurrentPosition();
         setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        // Request notification permission
+        await requestNotificationPermission();
       } catch (e: any) {
         setError(e?.message ?? 'Failed to get location');
       }
@@ -51,7 +72,6 @@ export function Prayers() {
     try {
       const res = await getPrayerTimesByCoords(lat, lon, { method, school });
       setTimings(res.timings);
-      setTimezone(res.timezone);
       setDateReadable(res.dateReadable);
       setNext(computeNextPrayer(res.timings));
     } catch (e: any) {
@@ -90,7 +110,10 @@ export function Prayers() {
             <p className="text-teal-600 text-sm mt-1">Accurate times for your location</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 border-2 border-gray-400 text-gray-700 px-5 py-2 rounded-full font-semibold hover:border-gray-500 transition">
+            <button 
+              onClick={() => setQiblaFinderOpen(true)}
+              className="flex items-center gap-2 border-2 border-gray-400 text-gray-700 px-5 py-2 rounded-full font-semibold hover:border-gray-500 transition"
+            >
               <Navigation size={20} />
               Qibla Finder
             </button>
@@ -102,6 +125,9 @@ export function Prayers() {
             </button>
           </div>
         </div>
+
+        {/* Qibla Finder Modal */}
+        <QiblaFinder isOpen={qiblaFinderOpen} onClose={() => setQiblaFinderOpen(false)} />
 
         {/* Settings Panel */}
         {showSettings && (
@@ -156,9 +182,8 @@ export function Prayers() {
           <div className="lg:col-span-2 space-y-6">
             {/* Prayer Card */}
             <div 
-              className="bg-cover bg-center text-white rounded-2xl overflow-hidden relative shadow-xl"
+              className="text-white rounded-2xl overflow-hidden relative shadow-xl bg-gradient-to-r from-teal-700 to-teal-600"
               style={{
-                backgroundImage: `url(${mosqueImage})`,
                 minHeight: '240px'
               }}
             >
@@ -249,7 +274,30 @@ export function Prayers() {
                     </div>
                     <div className="flex items-center gap-6">
                       <p className="text-xl font-bold text-gray-700">{time}</p>
-                      <Bell className="w-5 h-5 text-gray-400" />
+                      <button
+                        onClick={async () => {
+                          const isDisabled = disabledNotifications.has(name);
+                          if (isDisabled) {
+                            // Re-enable notifications
+                            const newDisabled = new Set(disabledNotifications);
+                            newDisabled.delete(name);
+                            setDisabledNotifications(newDisabled);
+                          } else {
+                            // Disable notifications
+                            const newDisabled = new Set(disabledNotifications);
+                            newDisabled.add(name);
+                            setDisabledNotifications(newDisabled);
+                          }
+                        }}
+                        className="p-2 rounded-full hover:bg-teal-50 transition cursor-pointer group"
+                        title={disabledNotifications.has(name) ? `Enable notifications for ${name}` : `Disable notifications for ${name}`}
+                      >
+                        {disabledNotifications.has(name) ? (
+                          <BellOff className="w-5 h-5 text-gray-400 group-hover:text-red-600 transition" />
+                        ) : (
+                          <Bell className="w-5 h-5 text-gray-400 group-hover:text-teal-700 transition" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 );
@@ -303,6 +351,8 @@ export function Prayers() {
             </div>
           </div>
         </div>
+        {/* Hidden audio element for Adhan */}
+        <audio ref={adhanAudioRef} />
       </div>
     </div>
   );
