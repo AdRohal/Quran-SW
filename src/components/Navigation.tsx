@@ -1,19 +1,23 @@
-import { Home, BookOpen, Clock, Heart, User, Radio } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Home, BookOpen, Clock, Heart, User, Radio, Navigation as NavigationIcon } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
 
 export function Navigation() {
+  const location = useLocation();
+  const isQiblaPage = location.pathname === '/qibla';
+
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Radio, label: 'Live', path: '/live' },
     { icon: BookOpen, label: 'Quran', path: '/quran' },
     { icon: Radio, label: 'Radio', path: '/radio' },
     { icon: Clock, label: 'Prayers', path: '/prayers' },
+    { icon: NavigationIcon, label: 'Qibla', path: '/qibla' },
     { icon: Heart, label: 'Adkar', path: '/adkar' },
     { icon: User, label: 'Profile', path: '/profile' },
   ]
 
   return (
-    <aside className="hidden md:block w-72 h-screen fixed left-0 top-0 p-4">
+    <aside className={`w-72 h-screen fixed left-0 top-0 p-4 z-50 ${isQiblaPage ? 'block' : 'hidden md:block'}`}>
       <div className="flex flex-col h-full rounded-3xl bg-[#e9f4f1] border border-teal-100 shadow-sm">
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-6">

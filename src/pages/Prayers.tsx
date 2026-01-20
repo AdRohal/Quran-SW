@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { Sun, Moon, Settings, Navigation, MapPin, Calendar, Bell, BellOff, Sunrise, Sunset } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   METHOD_OPTIONS,
   SCHOOL_OPTIONS,
@@ -8,7 +9,6 @@ import {
   getPrayerTimesByCoords,
 } from '../lib/prayerTimes';
 import { getAdhanAudio, requestNotificationPermission, showPrayerNotification } from '../lib/quran';
-import { QiblaFinder } from '../components/QiblaFinder';
 
 type MethodValue = (typeof METHOD_OPTIONS)[number]['value'];
 type SchoolValue = (typeof SCHOOL_OPTIONS)[number]['value'];
@@ -23,12 +23,12 @@ function formatCountdown(ms: number): string {
 }
 
 export function Prayers() {
+  const navigate = useNavigate();
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [method, setMethod] = useState<MethodValue>(3);
   const [school, setSchool] = useState<SchoolValue>(0);
   const [timings, setTimings] = useState<Record<string, string> | null>(null);
   const [dateReadable, setDateReadable] = useState('');
-  const [qiblaFinderOpen, setQiblaFinderOpen] = useState(false);
   const [next, setNext] = useState<ReturnType<typeof computeNextPrayer> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +111,7 @@ export function Prayers() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setQiblaFinderOpen(true)}
+              onClick={() => navigate('/qibla')}
               className="flex items-center gap-2 border-2 border-gray-400 text-gray-700 px-5 py-2 rounded-full font-semibold hover:border-gray-500 transition"
             >
               <Navigation size={20} />
@@ -125,9 +125,6 @@ export function Prayers() {
             </button>
           </div>
         </div>
-
-        {/* Qibla Finder Modal */}
-        <QiblaFinder isOpen={qiblaFinderOpen} onClose={() => setQiblaFinderOpen(false)} />
 
         {/* Settings Panel */}
         {showSettings && (
