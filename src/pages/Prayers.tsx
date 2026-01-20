@@ -8,7 +8,7 @@ import {
   getCurrentPosition,
   getPrayerTimesByCoords,
 } from '../lib/prayerTimes';
-import { getAdhanAudio, requestNotificationPermission, showPrayerNotification } from '../lib/quran';
+import { requestNotificationPermission } from '../lib/quran';
 
 type MethodValue = (typeof METHOD_OPTIONS)[number]['value'];
 type SchoolValue = (typeof SCHOOL_OPTIONS)[number]['value'];
@@ -45,9 +45,68 @@ export function Prayers() {
     }
     return new Set();
   });
+  const [hadith, setHadith] = useState<{ text: string; arabic: string; source: string } | null>(null);
+  const [hadithLoading, setHadithLoading] = useState(false);
   const adhanAudioRef = useRef<HTMLAudioElement>(null);
 
-  // Save disabled notifications to localStorage whenever it changes
+  // Fetch Hadith of the Day
+  useEffect(() => {
+    const fetchHadith = () => {
+      try {
+        setHadithLoading(true);
+        const localHadiths = [
+          {
+            text: 'The five daily prayers and Friday prayer until Friday prayer are expiations for what is between them.',
+            arabic: 'الصلوات الخمس والجمعة إلى الجمعة كفارة لما بينهن.',
+            source: 'Sahih Muslim',
+          },
+          {
+            text: 'The best of deeds is to be done with sincerity and purity of heart.',
+            arabic: 'أحسن الأعمال ما كان بإخلاص وطهارة قلب.',
+            source: 'Hadith',
+          },
+          {
+            text: 'Seeking knowledge is obligatory on every Muslim.',
+            arabic: 'طلب العلم فريضة على كل مسلم.',
+            source: 'Sunan Ibn Majah',
+          },
+          {
+            text: 'None of you truly believes until he loves for his brother what he loves for himself.',
+            arabic: 'لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه.',
+            source: 'Sahih Bukhari',
+          },
+          {
+            text: 'The best among you are those who are best to their families.',
+            arabic: 'خيركم خيركم لأهله.',
+            source: 'At-Tirmidhi',
+          },
+          {
+            text: 'The Prophet said: "All the children of Adam commit sin, and the best of sinners are those who repent."',
+            arabic: 'قال النبي: كل بني آدم خطاء وخير الخطائين التوابون.',
+            source: 'Sunan Ibn Majah',
+          },
+          {
+            text: 'Modesty is part of faith.',
+            arabic: 'الحياء من الإيمان.',
+            source: 'Sahih Muslim',
+          },
+          {
+            text: 'The best charity is given when one is in need.',
+            arabic: 'أفضل الصدقة ما كانت والحاجة ماسة.',
+            source: 'Hadith',
+          },
+        ];
+        const randomIndex = Math.floor(Math.random() * localHadiths.length);
+        setHadith(localHadiths[randomIndex]);
+      } catch (err) {
+        console.error('Error loading hadith:', err);
+      } finally {
+        setHadithLoading(false);
+      }
+    };
+
+    fetchHadith();
+  }, []);
   useEffect(() => {
     localStorage.setItem('disabledPrayerNotifications', JSON.stringify(Array.from(disabledNotifications)));
   }, [disabledNotifications]);
@@ -341,10 +400,21 @@ export function Prayers() {
             {/* Hadith of the Day */}
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 shadow-md border border-yellow-200">
               <h2 className="text-lg font-bold text-yellow-900 mb-3">Hadith of the Day</h2>
-              <p className="text-sm italic text-yellow-800 leading-relaxed">
-                "The five daily prayers and Friday prayer until Friday prayer are expiations for what is between them."
-              </p>
-              <p className="text-xs text-yellow-700 mt-3 font-semibold">— Sahih Muslim</p>
+              {hadithLoading ? (
+                <p className="text-sm text-yellow-700 italic animate-pulse">Loading hadith...</p>
+              ) : hadith ? (
+                <>
+                  <p className="text-sm italic text-yellow-800 leading-relaxed">
+                    "{hadith.text}"
+                  </p>
+                  <p className="text-base leading-relaxed text-yellow-800 mt-4" style={{ fontFamily: 'var(--font-arabic)', direction: 'rtl', textAlign: 'right' }}>
+                    {hadith.arabic}
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-4 font-semibold">— {hadith.source}</p>
+                </>
+              ) : (
+                <p className="text-sm text-yellow-700">Unable to load hadith. Please try again later.</p>
+              )}
             </div>
           </div>
         </div>

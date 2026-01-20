@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapPin, Navigation, Loader } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -47,35 +47,8 @@ function FitBounds({ bounds }: { bounds: L.LatLngBounds | null }) {
 
 export function QiblaMap() {
   const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [distance, setDistance] = useState<number | null>(null);
-  const [qiblaDirection, setQiblaDirection] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Calculate Qibla direction
-  const calculateQibla = (userLat: number, userLon: number): number => {
-    const lat1 = (userLat * Math.PI) / 180;
-    const lat2 = (MECCA_LAT * Math.PI) / 180;
-    const dLon = ((MECCA_LON - userLon) * Math.PI) / 180;
-
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-
-    const bearing = (Math.atan2(y, x) * 180) / Math.PI;
-    return (bearing + 360) % 360;
-  };
-
-  // Calculate distance between two points
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
 
   // Get user location
   useEffect(() => {
@@ -88,13 +61,6 @@ export function QiblaMap() {
           const { latitude, longitude } = position.coords;
           const userLoc = { lat: latitude, lon: longitude };
           setUserLocation(userLoc);
-          
-          const direction = calculateQibla(latitude, longitude);
-          setQiblaDirection(direction);
-          
-          const dist = calculateDistance(latitude, longitude, MECCA_LAT, MECCA_LON);
-          setDistance(dist);
-          
           setLoading(false);
         },
         (err) => {
@@ -138,28 +104,21 @@ export function QiblaMap() {
       {!loading && !error && userLocation && (
         <div className="flex-1">
           <MapContainer
-            center={[(userLocation.lat + MECCA_LAT) / 2, (userLocation.lon + MECCA_LON) / 2]}
+            center={[(userLocation.lat + MECCA_LAT) / 2, (userLocation.lon + MECCA_LON) / 2] as [number, number]}
             zoom={3}
             minZoom={3.5}
             maxZoom={18}
             style={{ height: '100%', width: '100%' }}
-            maxBounds={[[-85, -180], [85, 180]]}
-            maxBoundsViscosity={1.0}
-            draggable={true}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              noWrap={true}
+              crossOrigin=""
             />
 
             {/* Polyline connecting user to Mecca */}
             <Polyline
               positions={[[userLocation.lat, userLocation.lon], [MECCA_LAT, MECCA_LON]]}
-              color="#0d766e"
-              weight={3}
-              opacity={0.8}
-              dashArray="10, 5"
+              pathOptions={{ color: '#0d766e', weight: 3, opacity: 0.8, dashArray: '10, 5' }}
             />
 
             {/* User Location Marker */}
@@ -191,9 +150,3 @@ export function QiblaMap() {
   );
 }
 
-// Helper function to get direction label
-function getDirectionLabel(degrees: number): string {
-  const directions = ['North', 'NNE', 'NE', 'ENE', 'East', 'ESE', 'SE', 'SSE', 'South', 'SSW', 'SW', 'WSW', 'West', 'WNW', 'NW', 'NNW'];
-  const index = Math.round((degrees % 360) / 22.5) % 16;
-  return directions[index];
-}

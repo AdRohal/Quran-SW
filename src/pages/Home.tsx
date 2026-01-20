@@ -271,12 +271,6 @@ export function Home() {
       </audio>
 
       {/* Notification Permission Badge */}
-      {notificationPermission === 'granted' && (
-        <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 rounded-lg p-2">
-          <Bell size={16} className="text-green-600" />
-          <span>Prayer notifications enabled</span>
-        </div>
-      )}
       {notificationPermission === 'denied' && (
         <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 rounded-lg p-2">
           <Bell size={16} className="text-red-600 line-through" />
