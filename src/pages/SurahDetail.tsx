@@ -42,6 +42,7 @@ const RECITERS: Reciter[] = [
   { id: 7, name: 'Mishari Rashid Al Afasy', recitationId: 7 },
   { id: 8, name: 'Maher Al Meaqli', recitationId: 8 },
   { id: 9, name: 'Muhammad Ayyub', recitationId: 22 },
+  { id: 10, name: 'Yasser Ad Dussary', recitationId: 174 },
 ]
 
 export function SurahDetail() {
@@ -60,8 +61,13 @@ export function SurahDetail() {
   const [currentAyahPlaying, setCurrentAyahPlaying] = useState<number | null>(null)
   const [showReciterMenu, setShowReciterMenu] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const nextAudioRef = useRef<HTMLAudioElement>(null)
   const isPlayingSequenceRef = useRef<boolean>(false)
   const currentVerseIndexRef = useRef<number>(0)
+  const updateIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const reciterFoldersRef = useRef<Record<number, string> | null>(null)
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
@@ -127,62 +133,44 @@ export function SurahDetail() {
     }
   }, [])
 
-  const playAyah = async () => {
+  const playAyah = () => {
     if (!audioRef.current || !surah || ayahs.length === 0) return
 
-    try {
-      isPlayingSequenceRef.current = true
-      currentVerseIndexRef.current = 0
-      setIsPlaying(true)
-      
-      // Set up auto-play next verse when current ends
-      audioRef.current.onended = () => {
-        currentVerseIndexRef.current += 1
-        console.log(`✓ Verse ended, next verse index: ${currentVerseIndexRef.current}`)
-        
-        if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
-          // Play next verse immediately without waiting for state updates
-          playVerseByIndex(currentVerseIndexRef.current)
-        } else {
-          // Finished all verses
-          isPlayingSequenceRef.current = false
-          setIsPlaying(false)
-          setCurrentAyahPlaying(null)
-          console.log('✅ Finished surah!')
-        }
+    isPlayingSequenceRef.current = true
+    currentVerseIndexRef.current = 0
+    setIsPlaying(true)
+    
+    // Set up seamless next verse playback
+    audioRef.current.onended = () => {
+      currentVerseIndexRef.current += 1
+      if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
+        playVerseByIndex(currentVerseIndexRef.current)
+      } else {
+        isPlayingSequenceRef.current = false
+        setIsPlaying(false)
+        setCurrentAyahPlaying(null)
       }
-
-      // Play first verse
-      console.log('▶ Starting surah playback...')
-      playVerseByIndex(0)
-    } catch (err) {
-      console.error('Error starting playback:', err)
-      setIsPlaying(false)
-      setCurrentAyahPlaying(null)
-      isPlayingSequenceRef.current = false
     }
+    
+    playVerseByIndex(0)
   }
 
-  // Play verse by specific index - NO state dependencies!
-  const playVerseByIndex = async (verseIndex: number) => {
+  // Play verse by specific index - OPTIMIZED for speed
+  const playVerseByIndex = (verseIndex: number) => {
     if (!audioRef.current || !surah || !isPlayingSequenceRef.current) return
     
     if (verseIndex >= ayahs.length) {
-      // Finished
       isPlayingSequenceRef.current = false
       setIsPlaying(false)
       setCurrentAyahPlaying(null)
       return
     }
 
-    try {
-      const reciter = RECITERS.find((r) => r.id === selectedReciter)
-      if (!reciter) return
-
-      const currentAyah = ayahs[verseIndex]
-      
-      // Map reciter ID to everyayah.com folder names
-      const reciterFolders: Record<number, string> = {
+    const currentAyah = ayahs[verseIndex]
+    
+    // Build reciter folders once
+    if (!reciterFoldersRef.current) {
+      reciterFoldersRef.current = {
         1: 'Abdul_Basit_Mujawwad_128kbps',
         2: 'Abdul_Basit_Murattal_192kbps',
         3: 'Abdurrahmaan_As-Sudais_192kbps',
@@ -191,33 +179,70 @@ export function SurahDetail() {
         6: 'Hudhaify_128kbps',
         7: 'Alafasy_128kbps',
         8: 'MaherAlMuaiqly128kbps',
-        9: 'muhammed_ayyoub_128kbps'
+        10: 'Yasser_Ad-Dussary_128kbps'
       }
-      
-      const folder = reciterFolders[reciter.id] || reciterFolders[1]
+    }
+
+    console.log(`🎵 ${verseIndex + 1}/${ayahs.length}`)
+    
+    // Update UI without blocking
+    setCurrentAyahPlaying(currentAyah.numberInSurah)
+    
+    // Build audio URL based on reciter
+    let audioUrl: string
+    
+    if (selectedReciter === 9) {
+      // Muhammad Ayyoub - route through audio proxy to bypass CORS
+      const absoluteAyahNumber = currentAyah.number
+      audioUrl = `/api/quran/audio/${absoluteAyahNumber}?reciter=muhammadayyoub`
+    } else if (selectedReciter === 10) {
+      // Yasser Ad Dussary - use everyayah.com
+      const folder = 'Yasser_Ad-Dussary_128kbps'
       const chapterPadded = String(surah.number).padStart(3, '0')
       const versePadded = String(currentAyah.numberInSurah).padStart(3, '0')
-      const audioUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${versePadded}.mp3`
-      
-      console.log(`🎵 Verse ${verseIndex + 1}/${ayahs.length}`)
-      
-      // Highlight immediately
-      setCurrentAyahPlaying(currentAyah.numberInSurah)
-      
-      // Play
-      audioRef.current.src = audioUrl
-      audioRef.current.crossOrigin = 'anonymous'
-      await audioRef.current.play()
-    } catch (err) {
-      console.error('Error playing verse:', err)
-      // Auto-advance on error
+      audioUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${versePadded}.mp3`
+    } else {
+      // Other reciters use everyayah.com
+      const folder = reciterFoldersRef.current[selectedReciter] || reciterFoldersRef.current[1]
+      const chapterPadded = String(surah.number).padStart(3, '0')
+      const versePadded = String(currentAyah.numberInSurah).padStart(3, '0')
+      audioUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${versePadded}.mp3`
+    }
+    
+    // Play immediately
+    audioRef.current.src = audioUrl
+    audioRef.current.crossOrigin = 'anonymous'
+    audioRef.current.play().catch(() => {
+      // Skip on error
       currentVerseIndexRef.current += 1
       if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
         playVerseByIndex(currentVerseIndexRef.current)
-      } else {
-        isPlayingSequenceRef.current = false
-        setIsPlaying(false)
       }
+    })
+    
+    // Pre-load next verse
+    if (nextAudioRef.current && verseIndex + 1 < ayahs.length) {
+      const nextAyah = ayahs[verseIndex + 1]
+      
+      let nextUrl: string
+      if (selectedReciter === 9) {
+        const absoluteAyahNumber = nextAyah.number
+        nextUrl = `/api/quran/audio/${absoluteAyahNumber}?reciter=muhammadayyoub`
+      } else if (selectedReciter === 10) {
+        const folder = 'Yasser_Ad-Dussary_128kbps'
+        const chapterPadded = String(surah.number).padStart(3, '0')
+        const nextVersionPadded = String(nextAyah.numberInSurah).padStart(3, '0')
+        nextUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${nextVersionPadded}.mp3`
+      } else {
+        const folder = reciterFoldersRef.current[selectedReciter] || reciterFoldersRef.current[1]
+        const chapterPadded = String(surah.number).padStart(3, '0')
+        const nextVersionPadded = String(nextAyah.numberInSurah).padStart(3, '0')
+        nextUrl = `https://everyayah.com/data/${folder}/${chapterPadded}${nextVersionPadded}.mp3`
+      }
+      
+      nextAudioRef.current.src = nextUrl
+      nextAudioRef.current.crossOrigin = 'anonymous'
+      nextAudioRef.current.preload = 'auto'
     }
   }
 
@@ -385,6 +410,7 @@ export function SurahDetail() {
       </div>
 
       <audio ref={audioRef} />
+      <audio ref={nextAudioRef} />
 
       {viewMode === 'verse' && (
         <div className="space-y-4">
@@ -392,7 +418,7 @@ export function SurahDetail() {
             <div
               key={ayah.number}
               className={`bg-white rounded-lg p-6 shadow-md border transition ${
-                currentAyahPlaying === ayah.number
+                currentAyahPlaying === ayah.numberInSurah
                   ? 'border-green-500 bg-green-50 shadow-lg'
                   : 'border-gray-100 hover:shadow-lg'
               }`}
@@ -408,7 +434,7 @@ export function SurahDetail() {
                     <button
                       onClick={() => playAyah()}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition ${
-                        currentAyahPlaying === ayah.number && isPlaying
+                        currentAyahPlaying === ayah.numberInSurah && isPlaying
                           ? 'bg-green-600 text-white'
                           : 'bg-teal-700 text-white hover:bg-teal-800'
                       }`}
@@ -462,9 +488,9 @@ export function SurahDetail() {
               {ayahs.map((ayah) => (
                 <span
                   key={ayah.number}
-                  className={`inline transition-all duration-100 rounded px-2 py-1 ${
+                  className={`inline transition-all duration-100 rounded px-1 ${
                     currentAyahPlaying === ayah.numberInSurah && isPlaying
-                      ? 'bg-yellow-300 text-gray-900 font-bold shadow-md'
+                      ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md leading-tight'
                       : ''
                   }`}
                   style={{ direction: 'rtl' }}

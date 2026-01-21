@@ -12,8 +12,9 @@ app.use(cors());
 app.get('/api/quran/audio/:ayahNumber', async (req, res) => {
   try {
     const { ayahNumber } = req.params;
+    const { reciter } = req.query;
     
-    console.log(`\n📢 Audio request received for ayah: ${ayahNumber}`);
+    console.log(`\n📢 Audio request received for ayah: ${ayahNumber}, reciter: ${reciter || 'default'}`);
     
     // Validate ayah number
     if (!ayahNumber || isNaN(ayahNumber)) {
@@ -21,17 +22,24 @@ app.get('/api/quran/audio/:ayahNumber', async (req, res) => {
       return res.status(400).json({ error: 'Invalid ayah number' });
     }
 
-    // Fetch audio from Islamic Network CDN
-    const audioUrl = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayahNumber}.mp3`;
-    
-    console.log(`🔗 Fetching from CDN: ${audioUrl}`);
+    let audioUrl = '';
+
+    if (reciter === 'muhammadayyoub') {
+      // Muhammad Ayyoub from Islamic Network CDN
+      audioUrl = `https://cdn.islamic.network/quran/audio/128/ar.muhammadayyoub/${ayahNumber}.mp3`;
+      console.log(`🔗 Fetching Muhammad Ayyoub from CDN: ${audioUrl}`);
+    } else {
+      // Default reciter (Alafasy) from Islamic Network CDN
+      audioUrl = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayahNumber}.mp3`;
+      console.log(`🔗 Fetching from CDN: ${audioUrl}`);
+    }
     
     const response = await fetch(audioUrl);
     
-    console.log(`📡 CDN Response status: ${response.status}`);
+    console.log(`📡 Response status: ${response.status}`);
     
     if (!response.ok) {
-      console.error(`❌ CDN Error: ${response.status} ${response.statusText}`);
+      console.error(`❌ Error: ${response.status} ${response.statusText}`);
       return res.status(response.status).json({ error: `Failed to fetch audio: ${response.statusText}` });
     }
 
@@ -41,8 +49,9 @@ app.get('/api/quran/audio/:ayahNumber', async (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.setHeader('Accept-Ranges', 'bytes');
     
-    // Convert to buffer and send
-    const buffer = await response.buffer();
+    // Get audio as buffer and send
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     console.log(`✅ Sending audio buffer: ${buffer.length} bytes`);
     res.send(buffer);
     

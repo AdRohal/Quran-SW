@@ -75,7 +75,7 @@ export async function getDailyVerse(): Promise<QuranVerse> {
       surahName: ayah.surah.englishName,
       englishName: ayah.surah.englishNameTranslation,
       ayahNumber: ayah.numberInSurah,
-      absoluteAyahNumber: ayah.number, // This is the absolute position in Quran (1-6236)
+      absoluteAyahNumber: verseNumber, // Use the verseNumber we calculated, which is the absolute position
       text: ayah.text,
       translation: translation
     };
