@@ -96,12 +96,12 @@ export async function getDailyVerse(): Promise<QuranVerse> {
 
 // Get Islamic holidays for the current Hijri year
 export const ISLAMIC_HOLIDAYS_DATA = [
+  { name: 'Islamic New Year', arabicName: 'رأس السنة الهجرية', hijri: { month: 1, day: 1 }, type: 'Major' },
+  { name: 'Prophet\'s Birthday', arabicName: 'مولد النبي', hijri: { month: 3, day: 12 }, type: 'Major' },
   { name: 'Ramadan Begins', arabicName: 'بداية رمضان', hijri: { month: 9, day: 1 }, type: 'Major' },
   { name: 'Eid al-Fitr', arabicName: 'عيد الفطر', hijri: { month: 10, day: 1 }, type: 'Major' },
   { name: 'Arafat Day', arabicName: 'يوم عرفة', hijri: { month: 12, day: 9 }, type: 'Major' },
   { name: 'Eid al-Adha', arabicName: 'عيد الأضحى', hijri: { month: 12, day: 10 }, type: 'Major' },
-  { name: 'Islamic New Year', arabicName: 'رأس السنة الهجرية', hijri: { month: 1, day: 1 }, type: 'Major' },
-  { name: 'Prophet\'s Birthday', arabicName: 'مولد النبي', hijri: { month: 3, day: 12 }, type: 'Major' },
 ];
 
 // Get audio URL for a specific ayah using backend proxy
@@ -155,19 +155,28 @@ export function getNextPrayerTime(timings: Record<string, string>): { name: stri
 
 // Filter holidays that haven't passed yet in the current Hijri year
 export const getUpcomingHolidays = (currentMonth: number, currentDay: number, limit: number = 4) => {
+  // First, get all holidays that haven't passed in the current year
   const upcoming = ISLAMIC_HOLIDAYS_DATA.filter(h => {
     if (h.hijri.month > currentMonth) return true;
     if (h.hijri.month === currentMonth && h.hijri.day >= currentDay) return true;
     return false;
-  }).slice(0, limit);
+  }).sort((a, b) => {
+    if (a.hijri.month !== b.hijri.month) return a.hijri.month - b.hijri.month;
+    return a.hijri.day - b.hijri.day;
+  });
 
-  // If not enough upcoming holidays, add from next year
+  // If not enough upcoming holidays in current year, add from next year
   if (upcoming.length < limit) {
-    const remaining = ISLAMIC_HOLIDAYS_DATA.slice(0, limit - upcoming.length);
+    const remaining = ISLAMIC_HOLIDAYS_DATA
+      .sort((a, b) => {
+        if (a.hijri.month !== b.hijri.month) return a.hijri.month - b.hijri.month;
+        return a.hijri.day - b.hijri.day;
+      })
+      .slice(0, limit - upcoming.length);
     return [...upcoming, ...remaining];
   }
 
-  return upcoming;
+  return upcoming.slice(0, limit);
 };
 
 // Request notification permission from user

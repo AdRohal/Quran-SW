@@ -155,6 +155,29 @@ export function SurahDetail() {
     playVerseByIndex(0)
   }
 
+  // Play a single ayah without looping or continuing to next ayah
+  const playSingleAyah = (ayahIndex: number) => {
+    if (!audioRef.current || !surah || ayahs.length === 0) return
+
+    // Stop any previous sequence playback
+    if (isPlayingSequenceRef.current && audioRef.current.playing) {
+      audioRef.current.pause()
+    }
+
+    isPlayingSequenceRef.current = true // Need this true for playVerseByIndex to work
+    currentVerseIndexRef.current = ayahIndex
+    setIsPlaying(true)
+    
+    // Set up ended handler that DOES NOT play next verse (key difference from playAyah)
+    audioRef.current.onended = () => {
+      isPlayingSequenceRef.current = false
+      setIsPlaying(false)
+      setCurrentAyahPlaying(null)
+    }
+    
+    playVerseByIndex(ayahIndex)
+  }
+
   // Play verse by specific index - OPTIMIZED for speed
   const playVerseByIndex = (verseIndex: number) => {
     if (!audioRef.current || !surah || !isPlayingSequenceRef.current) return
@@ -414,7 +437,7 @@ export function SurahDetail() {
 
       {viewMode === 'verse' && (
         <div className="space-y-4">
-          {ayahs.map((ayah) => (
+          {ayahs.map((ayah, index) => (
             <div
               key={ayah.number}
               className={`bg-white rounded-lg p-6 shadow-md border transition ${
@@ -432,7 +455,7 @@ export function SurahDetail() {
                   </div>
                   <div className="ml-4 flex-shrink-0 flex items-center gap-3">
                     <button
-                      onClick={() => playAyah()}
+                      onClick={() => playSingleAyah(index)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition ${
                         currentAyahPlaying === ayah.numberInSurah && isPlaying
                           ? 'bg-green-600 text-white'

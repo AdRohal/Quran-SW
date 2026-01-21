@@ -22,7 +22,7 @@ export function Navigation() {
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-6">
           <div className="w-12 h-12 rounded-full bg-teal-700 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-            N
+            <img src="/src/public/logo/trans_logo_2.png" alt="Nur Al-Quran" className="w-full h-full rounded-full object-cover" />
           </div>
           <div>
             <h1 className="font-semibold text-teal-900 text-base">Nur Al-Quran</h1>

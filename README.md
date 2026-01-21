@@ -262,9 +262,6 @@ Uses **Supabase** for:
 
 ## 🐛 Known Issues & Solutions
 
-### Issue: 404 errors on Yasser Ad Dussary audio
-- **Solution**: Use correct folder name `Yasser_Ad-Dussary_128kbps` (hyphen, not underscore)
-
 ### Issue: CORS errors on Quran.com API
 - **Solution**: Route through audio proxy server for CORS handling
 
@@ -297,11 +294,11 @@ Uses **Supabase** for:
 
 ## 📄 License
 
-[Add your license information here]
+//
 
 ## 📞 Contact & Support
 
-[Add contact information here]
+//
 
 ## 🙏 Acknowledgments
 

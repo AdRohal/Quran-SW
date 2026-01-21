@@ -25,21 +25,24 @@ const formatHijriDateArabic = (hijri: HijriDate) => {
   return `${hijri.hy} ${HIJRI_MONTHS[hijri.hm - 1]} ${hijri.hd}`
 }
 
-// Convert Hijri dates to Gregorian for display (approximation)
+// Convert Hijri dates to Gregorian for display (accurate algorithm)
 const hijriToGregorian = (hijriDay: number, hijriMonth: number, hijriYear: number) => {
-  const jd = Math.ceil(((11 * hijriYear + 3) / 30) + hijriMonth * 29.5001 + hijriDay + 1948439.5)
-  const l = jd + 68569
-  const n = Math.floor((4 * l) / 146097)
-  const l2 = l - Math.floor((146097 * n + 3) / 4)
-  const i = Math.floor((4000 * (l2 + 1)) / 1461001)
-  const l3 = l2 - Math.floor((1461 * i) / 4) + 31
-  const j = Math.floor((80 * l3) / 2447)
-  const d = l3 - Math.floor((2447 * j) / 80)
-  const l4 = Math.floor(j / 11)
-  const m = j + 2 - 12 * l4
-  const y = 100 * (n - 49) + i + l4
+  // Convert Hijri to Julian Day Number
+  const jd = hijriDay + Math.ceil(29.5001 * (hijriMonth - 1)) + (hijriYear - 1) * 354 + Math.floor((3 + 11 * hijriYear) / 30) + 1948439.5;
   
-  return new Date(y, m - 1, d)
+  // Convert Julian Day Number to Gregorian
+  const l = jd + 68569;
+  const n = Math.floor((4 * l) / 146097);
+  const l2 = l - Math.floor((146097 * n + 3) / 4);
+  const i = Math.floor((4000 * (l2 + 1)) / 1461001);
+  const l3 = l2 - Math.floor((1461 * i) / 4) + 31;
+  const j = Math.floor((80 * l3) / 2447);
+  const d = l3 - Math.floor((2447 * j) / 80);
+  const l4 = Math.floor(j / 11);
+  const m = j + 2 - 12 * l4;
+  const y = 100 * (n - 49) + i + l4;
+  
+  return new Date(y, m - 1, d);
 }
 
 // Get upcoming holidays dynamically based on current Hijri date
