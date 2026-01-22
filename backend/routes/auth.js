@@ -3,8 +3,12 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pkg from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Load environment variables from .env.local
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
 const { Pool } = pkg;
 const router = express.Router();

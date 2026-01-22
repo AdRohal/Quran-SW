@@ -36,6 +36,7 @@ function AppContent() {
             <Route path="/adkar" element={<Adkar />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="*" element={<Home />} />
           </Routes>
         </main>
         <RadioMiniPlayer />
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="/adkar" element={<Adkar />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Home />} />
         </Routes>
       </main>
       <RadioMiniPlayer />

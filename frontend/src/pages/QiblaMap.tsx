@@ -3,6 +3,7 @@ import { Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import './qibla-styles.css';
 
 const MECCA_LAT = 21.4225;
 const MECCA_LON = 39.8262;
@@ -85,9 +86,12 @@ export function QiblaMap() {
   }, [userLocation]);
 
   return (
-    <div className="w-full h-screen flex flex-col">
+    <div 
+      className="w-full h-screen flex flex-col gap-4 p-6"
+      style={{ paddingRight: '230px' }}
+    >
       {loading && (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center rounded-3xl bg-white shadow-md">
           <div className="text-center">
             <Loader className="w-12 h-12 text-teal-700 animate-spin mx-auto mb-4" />
             <p className="text-gray-600">Getting your location...</p>
@@ -96,13 +100,22 @@ export function QiblaMap() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4">
+        <div className="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
           <p className="text-red-700 font-medium">{error}</p>
         </div>
       )}
 
       {!loading && !error && userLocation && (
-        <div className="flex-1">
+        <div 
+          id="map-container" 
+          className="flex-1 rounded-3xl border-2 border-gray-300 shadow-xl overflow-hidden" 
+          style={{ 
+            borderRadius: '24px',
+            padding: '0',
+            margin: '8px',
+            marginRight: '100px'
+          }}
+        >
           <MapContainer
             center={[(userLocation.lat + MECCA_LAT) / 2, (userLocation.lon + MECCA_LON) / 2] as [number, number]}
             zoom={3}
