@@ -1,12 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import authRoutes from './routes/auth.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = 3001;
 
 // Enable CORS for all routes
 app.use(cors());
+
+// Middleware to parse JSON
+app.use(express.json());
+
+// Auth routes
+app.use('/api/auth', authRoutes);
 
 // Route to proxy Quran audio
 app.get('/api/quran/audio/:ayahNumber', async (req, res) => {

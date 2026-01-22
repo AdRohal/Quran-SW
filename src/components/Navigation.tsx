@@ -1,11 +1,13 @@
-import { Home, BookOpen, Clock, Heart, User, Radio, Navigation as NavigationIcon } from 'lucide-react'
+import { Home, BookOpen, Clock, Heart, User, Radio, Navigation as NavigationIcon, LogIn } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../store/auth'
 
 export function Navigation() {
   const location = useLocation();
   const isQiblaPage = location.pathname === '/qibla';
+  const { user } = useAuthStore();
 
-  const navItems = [
+  const baseNavItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Radio, label: 'Live', path: '/live' },
     { icon: BookOpen, label: 'Quran', path: '/quran' },
@@ -13,8 +15,13 @@ export function Navigation() {
     { icon: Clock, label: 'Prayers', path: '/prayers' },
     { icon: NavigationIcon, label: 'Qibla', path: '/qibla' },
     { icon: Heart, label: 'Adkar', path: '/adkar' },
-    { icon: User, label: 'Profile', path: '/profile' },
   ]
+
+  const authNavItem = user 
+    ? { icon: User, label: 'Profile', path: '/profile' }
+    : { icon: LogIn, label: 'Login/Sign up', path: '/profile' }
+
+  const navItems = [...baseNavItems, authNavItem]
 
   return (
     <aside className={`w-72 h-screen fixed left-0 top-0 p-4 z-50 ${isQiblaPage ? 'block' : 'hidden md:block'}`}>
