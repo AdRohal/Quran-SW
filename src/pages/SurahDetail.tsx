@@ -6,6 +6,7 @@ interface Ayah {
   number: number
   text: string
   numberInSurah: number
+  translation?: string
 }
 
 interface Surah {
@@ -45,6 +46,25 @@ const RECITERS: Reciter[] = [
   { id: 10, name: 'Yasser Ad Dussary', recitationId: 174 },
 ]
 
+interface Translation {
+  language: string
+  languageCode: string
+  translator: string
+}
+
+const TRANSLATIONS: Translation[] = [
+  { language: 'English (Sahih International)', languageCode: 'en.sahih', translator: 'Sahih International' },
+  { language: 'English (Yusuf Ali)', languageCode: 'en.yusufali', translator: 'Yusuf Ali' },
+  { language: 'English (Pickthall)', languageCode: 'en.pickthall', translator: 'Muhammad Marmaduke Pickthall' },
+  { language: 'Arabic (Al-Jalalayn)', languageCode: 'ar.jalalayn', translator: 'Al-Jalalayn' },
+  { language: 'French', languageCode: 'fr.hamidullah', translator: 'Muhammad Hamidullah' },
+  { language: 'Spanish', languageCode: 'es.asad', translator: 'Muhammad Asad' },
+  { language: 'Urdu', languageCode: 'ur.jahangir', translator: 'Jahangir' },
+  { language: 'Turkish', languageCode: 'tr.yazir', translator: 'Yazir' },
+  { language: 'German', languageCode: 'de.bubenheim', translator: 'Bubenheim' },
+  { language: 'Indonesian', languageCode: 'id.indonesian', translator: 'Indonesian' },
+]
+
 export function SurahDetail() {
   const { surahNumber } = useParams<{ surahNumber: string }>()
   const navigate = useNavigate()
@@ -57,6 +77,8 @@ export function SurahDetail() {
   const [fontSize, setFontSize] = useState(30)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
   const [selectedReciter, setSelectedReciter] = useState<number>(1)
+  const [selectedTranslation, setSelectedTranslation] = useState<string>('en.sahih')
+  const [showTranslationMenu, setShowTranslationMenu] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentAyahPlaying, setCurrentAyahPlaying] = useState<number | null>(null)
   const [showReciterMenu, setShowReciterMenu] = useState(false)
@@ -121,6 +143,32 @@ export function SurahDetail() {
 
     fetchSurahDetail()
   }, [surahNumber, qiraat])
+
+  // Fetch translations when selected translation changes
+  useEffect(() => {
+    const fetchTranslations = async () => {
+      if (ayahs.length === 0 || !surahNumber) return
+
+      try {
+        const response = await fetch(
+          `https://api.alquran.cloud/v1/surah/${surahNumber}/${selectedTranslation}`
+        )
+        const data = await response.json()
+        if (data.code === 200 && data.data.ayahs) {
+          setAyahs((prevAyahs) =>
+            prevAyahs.map((ayah, index) => ({
+              ...ayah,
+              translation: data.data.ayahs[index]?.text || '',
+            }))
+          )
+        }
+      } catch (err) {
+        console.error('Error fetching translation:', err)
+      }
+    }
+
+    fetchTranslations()
+  }, [selectedTranslation, surahNumber, ayahs.length])
 
   // Cleanup on component unmount
   useEffect(() => {
@@ -388,6 +436,16 @@ export function SurahDetail() {
               {RECITERS.find((r) => r.id === selectedReciter)?.name || 'Select Reciter'}
             </button>
 
+            {viewMode === 'verse' && (
+              <button
+                onClick={() => setShowTranslationMenu(!showTranslationMenu)}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-teal-700 rounded-lg font-semibold hover:bg-gray-100 transition"
+              >
+                <FileText size={20} />
+                {TRANSLATIONS.find((t) => t.languageCode === selectedTranslation)?.language || 'Select Language'}
+              </button>
+            )}
+
             {viewMode === 'continuous' && (
               <button
                 onClick={playSurahContinuous}
@@ -429,6 +487,27 @@ export function SurahDetail() {
               ))}
             </div>
           )}
+
+          {showTranslationMenu && viewMode === 'verse' && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {TRANSLATIONS.map((translation) => (
+                <button
+                  key={translation.languageCode}
+                  onClick={() => {
+                    setSelectedTranslation(translation.languageCode)
+                    setShowTranslationMenu(false)
+                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition text-sm ${
+                    selectedTranslation === translation.languageCode
+                      ? 'bg-green-500 text-white'
+                      : 'bg-teal-700 text-white hover:bg-teal-600'
+                  }`}
+                >
+                  {translation.language}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -449,20 +528,34 @@ export function SurahDetail() {
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-4 gap-4">
                   <div className="flex-1">
-                    <p className="text-right text-2xl leading-relaxed text-gray-800 font-semibold">
+                    <p className="text-right text-2xl leading-relaxed text-gray-800 font-semibold mb-4">
                       {ayah.text}
                     </p>
+                    {ayah.translation && (
+                      <p className="text-left text-sm leading-relaxed text-gray-700 italic bg-gray-50 p-3 rounded-lg border-l-4 border-teal-700">
+                        {ayah.translation}
+                      </p>
+                    )}
                   </div>
                   <div className="ml-4 flex-shrink-0 flex items-center gap-3">
                     <button
-                      onClick={() => playSingleAyah(index)}
+                      onClick={() => {
+                        if (currentAyahPlaying === ayah.numberInSurah && isPlaying && audioRef.current) {
+                          // Pause the current ayah
+                          audioRef.current.pause()
+                          setIsPlaying(false)
+                        } else {
+                          // Play the ayah
+                          playSingleAyah(index)
+                        }
+                      }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition ${
                         currentAyahPlaying === ayah.numberInSurah && isPlaying
                           ? 'bg-green-600 text-white'
                           : 'bg-teal-700 text-white hover:bg-teal-800'
                       }`}
                     >
-                      {currentAyahPlaying === ayah.number && isPlaying ? (
+                      {currentAyahPlaying === ayah.numberInSurah && isPlaying ? (
                         <Pause size={18} />
                       ) : (
                         <Play size={18} />

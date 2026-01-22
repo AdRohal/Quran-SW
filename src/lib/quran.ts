@@ -210,8 +210,8 @@ export async function showPrayerNotification(title: string, body: string): Promi
     try {
       new Notification(title, {
         body: body,
-        icon: '🕌',
-        badge: '🕌',
+        icon: '/logo/trans_logo_1.png',
+        badge: '/logo/trans_logo_1.png',
         tag: 'prayer-notification',
       });
     } catch (error) {
