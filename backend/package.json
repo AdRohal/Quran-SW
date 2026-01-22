@@ -1,0 +1,23 @@
+{
+  "name": "quran-sw-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "pg": "^8.17.2",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.6.1",
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.5",
+    "axios": "^1.5.0",
+    "@supabase/supabase-js": "^2.37.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -3,12 +3,15 @@ import cors from 'cors';
 import fetch from 'node-fetch';
 import authRoutes from './routes/auth.js';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from .env.local
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 5000;
 
 // Enable CORS for all routes
 app.use(cors());
