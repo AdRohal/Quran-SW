@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack, Mic } from 'lucide-react'
 
 interface Ayah {
   number: number
@@ -25,12 +25,6 @@ interface Reciter {
   id: number
   name: string
   recitationId: number
-}
-
-interface WordTiming {
-  verse_number: number
-  timestamp_from: number
-  timestamp_to: number
 }
 
 const RECITERS: Reciter[] = [
@@ -74,6 +68,7 @@ export function SurahDetail() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('continuous')
   const [showSettings, setShowSettings] = useState(false)
+  const [showMic, setShowMic] = useState(false)
   const [fontSize, setFontSize] = useState(30)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
   const [selectedReciter, setSelectedReciter] = useState<number>(1)
@@ -83,8 +78,15 @@ export function SurahDetail() {
   const [currentAyahPlaying, setCurrentAyahPlaying] = useState<number | null>(null)
   const [showReciterMenu, setShowReciterMenu] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; ayahIndex: number | null }>({ visible: false, x: 0, y: 0, ayahIndex: null })
+  const [isRecording, setIsRecording] = useState(false)
+  const [recognizedText, setRecognizedText] = useState<string>('')
+  const [highlightedAyahs, setHighlightedAyahs] = useState<Set<number>>(new Set())
+  const [passedAyahs, setPassedAyahs] = useState<number[]>([]) // Track passed ayahs: [1, 2, 3...]
+  const currentFocusAyahRef = useRef<number>(1) // Current target ayah to match (1-indexed)
+  const accumulatedTextRef = useRef<string>('') // All recognized text accumulated
   const audioRef = useRef<HTMLAudioElement>(null)
   const nextAudioRef = useRef<HTMLAudioElement>(null)
+  const recognitionRef = useRef<any>(null)
   const isPlayingSequenceRef = useRef<boolean>(false)
   const currentVerseIndexRef = useRef<number>(0)
   const updateIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -180,8 +182,19 @@ export function SurahDetail() {
       if (audioContextRef.current) {
         audioContextRef.current.close().catch(() => {})
       }
+      // Stop recording when leaving page
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
     }
   }, [])
+
+  // Stop recording when changing view mode or leaving page
+  useEffect(() => {
+    if (isRecording) {
+      stopRecording()
+    }
+  }, [viewMode, surahNumber])
 
   // Auto-scroll to highlighted ayah with smooth behavior
   useEffect(() => {
@@ -253,6 +266,210 @@ export function SurahDetail() {
     setContextMenu({ visible: false, x: 0, y: 0, ayahIndex: null })
   }
 
+  // Normalize Arabic text for comparison - comprehensive normalization
+  const normalizeArabic = (text: string): string => {
+    return text
+      // Remove Quranic special characters and markers
+      .replace(/[\u064B-\u0652]/g, '') // Remove all diacritical marks (Fatha, Damma, Kasra, Shadda, Sukun, etc.)
+      .replace(/[\u0640]/g, '') // Remove Kashida
+      .replace(/[\u200B-\u200D]/g, '') // Remove zero-width characters
+      .replace(/[\u061C]/g, '') // Remove invisible format character
+      .replace(/\u0640/g, '') // Remove Tatweel
+      // Normalize different forms of Alif
+      .replace(/أ/g, 'ا') // Alif with Hamza above
+      .replace(/إ/g, 'ا') // Alif with Hamza below
+      .replace(/آ/g, 'ا') // Alif with Madda
+      .replace(/ٱ/g, 'ا') // Alif with Wasla (used in Quran)
+      // Normalize Teh and similar
+      .replace(/ة/g, 'ه') // Teh Marbuta to Heh
+      // Normalize Yeh variants
+      .replace(/ى/g, 'ي') // Alif Maksura to Yeh
+      .replace(/ؤ/g, 'و') // Waw with Hamza
+      .replace(/ئ/g, 'ي') // Yeh with Hamza
+      // Normalize spaces
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  // Helper function to check if two words match - more lenient matching
+  const wordsMatch = (word1: string, word2: string): boolean => {
+    // Exact match
+    if (word1 === word2) return true
+
+    // Both words must be at least 2 characters
+    if (word1.length < 2 || word2.length < 2) return false
+
+    const minLength = Math.min(word1.length, word2.length)
+    const maxLength = Math.max(word1.length, word2.length)
+
+    // For short words (2-3 chars), require high match
+    if (minLength <= 3) {
+      const matchedChars = Array.from(word1).filter((char, idx) => word2[idx] === char).length
+      return matchedChars / maxLength >= 0.7 // 70% match for short words
+    }
+
+    // For longer words, require 75% character match
+    const matchedChars = Array.from(word1).filter((char, idx) => word2[idx] === char).length
+    return matchedChars / maxLength >= 0.75
+  }
+
+  // STRICT SEQUENTIAL MATCHING - Focus only on current target ayah
+  // Mark as passed only when LAST WORD is spoken
+  // Keep highlight visible until FIRST WORD of next ayah is spoken
+  const matchRecognizedText = (fullText: string) => {
+    if (!fullText || ayahs.length === 0) return
+
+    accumulatedTextRef.current = fullText
+    const normalizedRecognized = normalizeArabic(fullText).split(' ').filter(w => w.length > 0)
+
+    if (normalizedRecognized.length === 0) return
+
+    // Only try to match against the current focus ayah
+    const targetAyahNumber = currentFocusAyahRef.current
+    const targetAyahIndex = ayahs.findIndex(a => a.numberInSurah === targetAyahNumber)
+    
+    if (targetAyahIndex === -1 || targetAyahIndex >= ayahs.length) return
+
+    const targetAyah = ayahs[targetAyahIndex]
+    const normalizedAyahWords = normalizeArabic(targetAyah.text).split(' ').filter(w => w.length > 0)
+    
+    if (normalizedAyahWords.length === 0) return
+
+    // Get the LAST WORD of the target ayah
+    const lastAyahWord = normalizedAyahWords[normalizedAyahWords.length - 1]
+    
+    // Check if any recognized word matches ANY word in the target ayah
+    let isPartiallyMatched = false
+    for (const recognizedWord of normalizedRecognized) {
+      const foundInAyah = normalizedAyahWords.some(ayahWord => 
+        wordsMatch(recognizedWord, ayahWord)
+      )
+      if (foundInAyah) {
+        isPartiallyMatched = true
+        break
+      }
+    }
+
+    // Check if the LAST WORD of the ayah has been spoken
+    let lastWordMatched = false
+    for (const recognizedWord of normalizedRecognized) {
+      if (wordsMatch(recognizedWord, lastAyahWord)) {
+        lastWordMatched = true
+        break
+      }
+    }
+
+    // Check if FIRST WORD of next ayah has been spoken (to clear current highlight)
+    let nextAyahFirstWordMatched = false
+    if (targetAyahNumber < ayahs.length) {
+      const nextAyahIndex = targetAyahIndex + 1
+      const nextAyah = ayahs[nextAyahIndex]
+      const normalizedNextAyahWords = normalizeArabic(nextAyah.text).split(' ').filter(w => w.length > 0)
+      
+      if (normalizedNextAyahWords.length > 0) {
+        const nextFirstWord = normalizedNextAyahWords[0]
+        for (const recognizedWord of normalizedRecognized) {
+          if (wordsMatch(recognizedWord, nextFirstWord)) {
+            nextAyahFirstWordMatched = true
+            break
+          }
+        }
+      }
+    }
+
+    // Highlight ayah if any word matches (partial match)
+    if (isPartiallyMatched && !nextAyahFirstWordMatched) {
+      const newHighlighted = new Set<number>()
+      newHighlighted.add(targetAyahNumber)
+      setHighlightedAyahs(newHighlighted)
+    } else if (nextAyahFirstWordMatched) {
+      // Clear highlight when first word of next ayah is spoken
+      setHighlightedAyahs(new Set())
+    }
+
+    // Only mark as PASSED when LAST WORD is spoken
+    if (lastWordMatched && !passedAyahs.includes(targetAyahNumber)) {
+      // Mark this ayah as passed and move to next
+      const newPassedAyahs = [...passedAyahs, targetAyahNumber]
+      setPassedAyahs(newPassedAyahs)
+      
+      // Move focus to next ayah
+      if (targetAyahNumber < ayahs.length) {
+        currentFocusAyahRef.current = targetAyahNumber + 1
+      }
+      
+      console.log(`✅ Ayah ${targetAyahNumber} COMPLETED! Passed ayahs:`, newPassedAyahs)
+    }
+  }
+
+  // Start recording and speech recognition
+  const startRecording = async () => {
+    try {
+      // Initialize Web Speech API
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (!SpeechRecognition) {
+        alert('Speech Recognition not supported in your browser')
+        return
+      }
+
+      if (!recognitionRef.current) {
+        recognitionRef.current = new SpeechRecognition()
+        recognitionRef.current.lang = 'ar-SA' // Arabic language
+        recognitionRef.current.continuous = true
+        recognitionRef.current.interimResults = true
+
+        recognitionRef.current.onstart = () => {
+          setIsRecording(true)
+          setRecognizedText('')
+          setHighlightedAyahs(new Set())
+          setPassedAyahs([]) // Reset passed ayahs tracking
+          currentFocusAyahRef.current = 1 // Start focusing on first ayah
+          accumulatedTextRef.current = ''
+        }
+
+        recognitionRef.current.onresult = (event: any) => {
+          let interimTranscript = ''
+          let finalTranscript = ''
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' '
+            } else {
+              interimTranscript += transcript
+            }
+          }
+
+          const fullText = finalTranscript + interimTranscript
+          setRecognizedText(fullText)
+          matchRecognizedText(fullText)
+        }
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+        }
+
+        recognitionRef.current.onend = () => {
+          setIsRecording(false)
+        }
+      }
+
+      recognitionRef.current.start()
+    } catch (error) {
+      console.error('Error starting recording:', error)
+    }
+  }
+
+  // Stop recording
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsRecording(false)
+      setHighlightedAyahs(new Set()) // Clear all highlights when stopping mic
+      setRecognizedText('') // Clear recognized text display
+    }
+  }
+
   const playAyah = () => {
     if (!audioRef.current || !surah || ayahs.length === 0) return
 
@@ -280,8 +497,8 @@ export function SurahDetail() {
     if (!audioRef.current || !surah || ayahs.length === 0) return
 
     // Stop any previous sequence playback
-    if (isPlayingSequenceRef.current && audioRef.current.playing) {
-      audioRef.current.pause()
+    if (isPlayingSequenceRef.current && !audioRef.current!.paused) {
+      audioRef.current!.pause()
     }
 
     isPlayingSequenceRef.current = true // Need this true for playVerseByIndex to work
@@ -387,15 +604,6 @@ export function SurahDetail() {
       nextAudioRef.current.crossOrigin = 'anonymous'
       nextAudioRef.current.preload = 'auto'
     }
-  }
-
-  const handleAudioEnded = () => {
-    // Fallback handler (should not fire during sequential playback because we override onended)
-    isPlayingSequenceRef.current = false
-    currentVerseIndexRef.current = 0
-    setIsPlaying(false)
-    setCurrentAyahPlaying(null)
-    console.log('✓ Finished playing surah')
   }
 
   const playSurahContinuous = () => {
@@ -683,6 +891,8 @@ export function SurahDetail() {
                   className={`inline transition-all duration-100 rounded px-1 cursor-context-menu ${
                     currentAyahPlaying === ayah.numberInSurah && isPlaying
                       ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md'
+                      : highlightedAyahs.has(ayah.numberInSurah)
+                      ? 'bg-yellow-300/40 hover:bg-yellow-300/60'
                       : 'hover:bg-green-300/40'
                   }`}
                   style={{ direction: 'rtl', padding: '0.125rem 0.25rem' }}
@@ -718,8 +928,16 @@ export function SurahDetail() {
             <Settings size={24} />
           </button>
 
+          <button
+            onClick={() => setShowMic(!showMic)}
+            className="fixed bg-teal-700 hover:bg-teal-900 text-white rounded-full p-4 shadow-lg transition z-40"
+            style={{ bottom: '24px', right: '100px' }}
+          >
+            <Mic size={24} />
+          </button>
+
           {showSettings && (
-            <div className="fixed bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200" style={{ bottom: '120px', right: '30px', marginBottom: '24px' }}>
+            <div className="fixed bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200" style={{ bottom: '80px', right: '30px', marginBottom: '24px' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-teal-700">Reading Settings</h3>
                 <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
@@ -776,6 +994,62 @@ export function SurahDetail() {
                   </label>
                 </div>
               </div>
+            </div>
+          )}
+
+          {showMic && (
+            <div className="fixed bg-white rounded-lg shadow-2xl p-6 w-80 z-40 border border-gray-200" style={{ bottom: '80px', right: '100px', marginBottom: '24px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-teal-700">Voice Recording</h3>
+                <button onClick={() => setShowMic(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {!isRecording ? (
+                <div className="text-center">
+                  <div className="bg-teal-50 rounded-lg p-6 mb-4">
+                    <Mic size={48} className="mx-auto text-teal-700 mb-2" />
+                    <p className="text-gray-700 font-semibold">Record your recitation</p>
+                    <p className="text-xs text-gray-500 mt-1">Tap the record button to start</p>
+                  </div>
+                  <button 
+                    onClick={startRecording}
+                    className="w-full bg-teal-700 hover:bg-teal-900 text-white font-semibold py-2 px-4 rounded-lg transition"
+                  >
+                    Start Recording
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="bg-red-50 rounded-lg p-6 mb-4">
+                    <div className="flex justify-center mb-3">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-red-500 rounded-full animate-pulse" style={{ opacity: 0.3 }}></div>
+                        <Mic size={48} className="text-red-600 relative" />
+                      </div>
+                    </div>
+                    <p className="text-gray-700 font-semibold">Recording...</p>
+                    <p className="text-xs text-gray-500 mt-1">Speak your Quranic text</p>
+                  </div>
+                  
+                  {recognizedText && (
+                    <div className="bg-gray-50 rounded-lg p-3 mb-4 text-right max-h-24 overflow-y-auto">
+                      <p className="text-xs font-semibold text-gray-600 mb-1">Recognized Text:</p>
+                      <p className="text-sm text-gray-800 font-arabic" style={{ fontFamily: "'Amiri Quran', serif" }}>
+                        {recognizedText}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={stopRecording}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                  >
+                    Stop Recording
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>
