@@ -114,87 +114,115 @@ A comprehensive Islamic learning application built with React, TypeScript, and V
 
 ### Running the Project
 
-#### Development Mode (Frontend + Audio Proxy)
-```bash
-npm run dev:full
-```
-This starts both:
-- Frontend Vite server: `http://localhost:5173`
-- Audio proxy server: `http://localhost:3001`
+#### Development Mode (Full Stack)
 
-#### Frontend Only
+**Terminal 1 - Frontend (Port 5173):**
 ```bash
+cd frontend
 npm run dev
 ```
 
-#### Audio Proxy Server Only
+**Terminal 2 - Backend (Port 5000):**
 ```bash
-npm run server
+cd backend
+npm start
+```
+
+#### Or use root monorepo scripts:
+```bash
+npm run dev:frontend    # Frontend only
+npm run dev:backend     # Backend only
 ```
 
 #### Production Build
 ```bash
-npm run build
+npm run build:frontend
+npm run build:backend
 ```
 
-#### Preview Build
+#### Install all dependencies
 ```bash
-npm run preview
+npm install              # Root dependencies
+cd frontend && npm install
+cd ../backend && npm install
 ```
 
 ## 📁 Project Structure
 
 ```
-Quran-SW/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── Navigation.tsx
-│   │   ├── LiveMiniPlayer.tsx
-│   │   ├── RadioMiniPlayer.tsx
-│   │   └── QiblaFinder.tsx
-│   ├── contexts/            # React Context for state management
-│   │   └── LiveContext.ts
-│   ├── hooks/               # Custom React hooks
-│   │   └── useLive.ts
-│   ├── lib/                 # Utility functions
-│   │   ├── quran.ts        # Quran API helpers
-│   │   ├── prayerTimes.ts  # Prayer times calculations
-│   │   └── supabase.ts     # Supabase client
-│   ├── pages/              # Page components
-│   │   ├── Home.tsx
-│   │   ├── Quran.tsx
-│   │   ├── SurahDetail.tsx
-│   │   ├── Prayers.tsx
-│   │   ├── Calendar.tsx
-│   │   ├── QiblaMap.tsx
-│   │   ├── Radio.tsx
-│   │   ├── Live.tsx
-│   │   ├── Adkar.tsx
-│   │   └── Profile.tsx
-│   ├── providers/           # Context providers
-│   │   ├── AuthProvider.tsx
-│   │   ├── LiveProvider.tsx
-│   │   └── RadioProvider.tsx
-│   ├── store/              # State management (Zustand)
-│   │   └── auth.ts
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── server.js               # Express audio proxy server
-├── vite.config.ts
-├── tailwind.config.js
-├── tsconfig.json
-└── package.json
+Quran-SW/ (Monorepo)
+├── frontend/               # React + Vite application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   │   ├── Navigation.tsx
+│   │   │   ├── LiveMiniPlayer.tsx
+│   │   │   ├── RadioMiniPlayer.tsx
+│   │   │   └── QiblaFinder.tsx
+│   │   ├── contexts/       # React Context for state management
+│   │   │   └── LiveContext.ts
+│   │   ├── hooks/          # Custom React hooks
+│   │   │   └── useLive.ts
+│   │   ├── lib/            # Utility functions
+│   │   │   ├── quran.ts          # Quran API helpers
+│   │   │   ├── prayerTimes.ts    # Prayer times calculations
+│   │   │   ├── authAPI.ts        # Authentication API
+│   │   │   ├── authUtils.ts      # Auth utilities
+│   │   │   └── supabase.ts       # Supabase client
+│   │   ├── pages/          # Page components
+│   │   │   ├── Home.tsx
+│   │   │   ├── Quran.tsx
+│   │   │   ├── SurahDetail.tsx
+│   │   │   ├── Prayers.tsx
+│   │   │   ├── Calendar.tsx
+│   │   │   ├── QiblaMap.tsx
+│   │   │   ├── Radio.tsx
+│   │   │   ├── Live.tsx
+│   │   │   ├── Adkar.tsx
+│   │   │   └── Profile.tsx
+│   │   ├── providers/      # Context providers
+│   │   │   ├── AuthProvider.tsx
+│   │   │   ├── LiveProvider.tsx
+│   │   │   └── RadioProvider.tsx
+│   │   ├── store/          # State management (Zustand)
+│   │   │   └── auth.ts
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── public/             # Static assets
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── tailwind.config.js
+│   └── postcss.config.cjs
+│
+├── backend/                # Express.js API server
+│   ├── routes/
+│   │   └── auth.js         # Authentication endpoints
+│   ├── server.js           # Express app & audio proxy
+│   ├── package.json
+│   └── .env.local          # Backend secrets (git-ignored)
+│
+├── .env                    # Frontend public keys (safe to commit)
+├── .env.local              # Backend secrets (git-ignored)
+├── .gitignore              # Git ignore patterns
+├── package.json            # Root monorepo package
+├── package-lock.json
+├── README.md
+└── 001_init_schema.sql     # Database schema
 ```
 
-## 🔄 Audio Proxy Server
+## 🔄 Backend API Server
 
-The Express.js proxy server (`server.js`) handles:
-- **CORS bypassing** - Allows audio fetching from third-party CDNs
+The Express.js backend server (`backend/server.js`) handles:
+- **Authentication** - User signup/login with JWT tokens
+- **Audio Proxy** - CORS bypassing for audio fetching from third-party CDNs
 - **Caching headers** - Sets appropriate cache-control for performance
 - **Audio streaming** - Proxies audio from various CDN sources
 
-### Endpoint
+### Endpoints
+
+#### Audio Proxy
 ```
 GET /api/quran/audio/:ayahNumber?reciter={reciter_param}
 ```
@@ -206,6 +234,14 @@ GET /api/quran/audio/:ayahNumber?reciter={reciter_param}
 
 **Response:**
 - Returns audio/mpeg stream with CORS headers set to `*`
+
+#### Authentication
+```
+POST /api/auth/signup
+POST /api/auth/login
+GET  /api/auth/me
+POST /api/auth/logout
+```
 
 ## 🎨 Customization
 

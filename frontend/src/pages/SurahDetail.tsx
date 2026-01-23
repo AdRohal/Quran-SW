@@ -90,6 +90,7 @@ export function SurahDetail() {
   const animationFrameRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const reciterFoldersRef = useRef<Record<number, string> | null>(null)
+  const ayahRefsRef = useRef<Record<number, HTMLSpanElement | null>>({})
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
@@ -180,6 +181,21 @@ export function SurahDetail() {
       }
     }
   }, [])
+
+  // Auto-scroll to highlighted ayah with smooth behavior
+  useEffect(() => {
+    if (currentAyahPlaying && isPlaying && viewMode === 'continuous') {
+      const ayahElement = ayahRefsRef.current[currentAyahPlaying]
+      if (ayahElement) {
+        setTimeout(() => {
+          ayahElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          })
+        }, 50)
+      }
+    }
+  }, [currentAyahPlaying, isPlaying, viewMode])
 
   const playAyah = () => {
     if (!audioRef.current || !surah || ayahs.length === 0) return
@@ -604,6 +620,9 @@ export function SurahDetail() {
               {ayahs.map((ayah) => (
                 <span
                   key={ayah.number}
+                  ref={(el) => {
+                    if (el) ayahRefsRef.current[ayah.numberInSurah] = el
+                  }}
                   className={`inline transition-all duration-100 rounded px-1 ${
                     currentAyahPlaying === ayah.numberInSurah && isPlaying
                       ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md leading-tight'
