@@ -117,9 +117,8 @@ export async function getAyahAudio(ayahNumber: number): Promise<string | null> {
 
 // Get Adhan audio URL
 export function getAdhanAudio(): string {
-  // Using a free high-quality Adhan audio
-  // This is a popular Adhan from Islamic Network
-  return 'https://cdn.islamic.network/quran/recitations/azan_ar_abdulbasitmubarakpuri/ar_abdulbasitmubarakpuri.mp3';
+  // Using a reliable high-quality Adhan audio from Qur'an.com
+  return 'https://quran.com/assets/audio/Adhan.mp3';
 }
 
 // Check if current time matches a prayer time (within 1 minute window)
