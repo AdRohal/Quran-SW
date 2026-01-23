@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, Lock, Moon, Share2, LogOut, ChevronRight, ArrowLeft, Mail, Lock as LockIcon, BookOpen, Calendar, Trophy, Award } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Bell, Lock, Moon, Share2, LogOut, ChevronRight, ArrowLeft, Mail, Lock as LockIcon, BookOpen, Calendar, Trophy, Award, Camera } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { authAPI } from '../lib/authAPI';
 import { useNavigate } from 'react-router-dom';
@@ -13,27 +13,44 @@ export function Profile() {
   const [currentView, setCurrentView] = useState<ViewType>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [editSuccess, setEditSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.full_name || '',
     email: user?.email || '',
-    bio: 'Striving to memorize the Quran.',
+    bio: user?.bio || 'Striving to memorize the Quran.',
+    image: null as File | null,
+    imagePreview: user?.image || null,
   });
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [authFormData, setAuthFormData] = useState({
     email: '',
     password: '',
     fullName: '',
   });
 
-  // Update currentView when user state changes
+  // Update currentView when user state changes (but only for login/logout, not profile updates)
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && currentView !== 'edit') {
       if (user) {
         setCurrentView('main');
       } else {
         setCurrentView('login');
       }
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, currentView]);
+
+  // Update formData when entering edit view or when user changes
+  useEffect(() => {
+    if (currentView === 'edit' && user) {
+      setFormData({
+        name: user.full_name || '',
+        email: user.email || '',
+        bio: user.bio || 'Striving to memorize the Quran.',
+        image: null,
+        imagePreview: user.image ? `data:image/jpeg;base64,${user.image}` : null,
+      });
+    }
+  }, [currentView, user]);
 
   // Show loading screen while checking authentication
   if (authLoading) {
@@ -96,8 +113,41 @@ export function Profile() {
     navigate('/profile');
   };
 
-
   const handleGoBack = () => setCurrentView('main');
+
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      console.log('Saving profile with:', { 
+        name: formData.name, 
+        email: formData.email, 
+        bio: formData.bio,
+        hasImage: !!formData.image,
+        imageFile: formData.image ? { name: formData.image.name, size: formData.image.size } : null
+      });
+      const response = await authAPI.updateProfile({
+        name: formData.name,
+        email: formData.email,
+        bio: formData.bio,
+        image: formData.image || undefined,
+      });
+      
+      console.log('Save response:', response);
+      setUser(response.user);
+      setEditSuccess(true);
+      // Clear success message after 3 seconds but stay in edit view
+      setTimeout(() => {
+        setEditSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      console.error('Save error:', err);
+      setError(err.response?.data?.error || 'Failed to save profile');
+      // Keep error message visible for user to see
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Terms of Service View
   if (currentView === 'terms') {
@@ -489,61 +539,170 @@ export function Profile() {
 
   // Edit Profile View
   if (currentView === 'edit') {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFormData({
+            ...formData,
+            image: file,
+            imagePreview: reader.result as string,
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
     return (
-      <div className="min-h-screen bg-white">
-        <div className="mx-auto px-6 md:px-12 lg:px-16 py-8">
+      <div className="min-h-screen bg-white flex items-start justify-center pt-8 pb-8">
+        <div className="w-full max-w-6xl px-6">
           <button
             onClick={handleGoBack}
-            className="flex items-center gap-2 text-teal-700 font-semibold mb-8 hover:text-teal-800"
+            className="flex items-center gap-2 text-teal-700 font-semibold mb-8 hover:text-teal-800 transition"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back
+            Back to Profile
           </button>
 
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 max-w-2xl">
-            <h1 className="text-3xl font-bold text-gray-800 mb-8">Edit Profile</h1>
+          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Mail className="w-6 h-6 text-teal-700" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">Edit Profile</h1>
+                <p className="text-gray-500 text-sm">Update your personal information</p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm font-semibold">{error}</p>
+              </div>
+            )}
+
+            {editSuccess && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-700 text-sm font-semibold">✓ Profile updated successfully!</p>
+              </div>
+            )}
 
             <div className="space-y-6">
+              {/* Profile Picture */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700"
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-1 bg-teal-700 rounded-full"></span>
+                  Profile Picture
+                </label>
+                <div className="flex items-center gap-6">
+                  <div className="w-24 h-24 bg-gradient-to-br from-teal-100 to-teal-200 rounded-xl flex items-center justify-center border-2 border-dashed border-teal-300 overflow-hidden flex-shrink-0">
+                    {formData.imagePreview ? (
+                      <img src={formData.imagePreview} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl font-bold text-teal-700">{(formData.name || user?.full_name || '?').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex items-center gap-2 bg-teal-700 text-white px-4 py-2 rounded-lg hover:bg-teal-800 transition font-semibold"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Upload Photo
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">JPG, PNG, GIF (Max 5MB)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-1 bg-teal-700 rounded-full"></span>
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter your full name"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent transition"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">This is how your name will appear on the platform</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-1 bg-teal-700 rounded-full"></span>
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="your@email.com"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent transition"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">We'll use this for important notifications</p>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Bio</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-1 bg-teal-700 rounded-full"></span>
+                  Bio
+                </label>
                 <textarea
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700"
+                  placeholder="Tell us about yourself and your Quran journey..."
+                  rows={5}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:border-transparent transition resize-none"
+                  maxLength={150}
                 />
+                <p className="text-xs text-gray-500 mt-2">{formData.bio.length}/150 characters</p>
               </div>
 
-              <div className="flex gap-4 pt-6">
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
                 <button
-                  onClick={handleGoBack}
-                  className="flex-1 bg-teal-700 text-white font-semibold py-3 rounded-lg hover:bg-teal-800 transition"
+                  onClick={handleSaveProfile}
+                  disabled={loading || editSuccess}
+                  className="flex-1 bg-gradient-to-r from-teal-700 to-teal-600 text-white font-semibold py-3 rounded-lg hover:from-teal-800 hover:to-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
                 >
-                  Save Changes
+                  {editSuccess ? (
+                    <>
+                      <span>✓</span>
+                      Changes Saved
+                    </>
+                  ) : loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <span>💾</span>
+                      Save Changes
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={handleGoBack}
-                  className="flex-1 border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 transition"
+                  disabled={loading}
+                  className="flex-1 border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -782,7 +941,11 @@ export function Profile() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center border-4 border-white/30 relative">
-                <span className="text-4xl">👤</span>
+                {user?.image ? (
+                  <img src={`data:image/jpeg;base64,${user.image}`} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-bold text-white">{user?.full_name?.charAt(0).toUpperCase() || '?'}</span>
+                )}
                 <div className="absolute bottom-0 right-0 w-7 h-7 bg-green-400 rounded-full border-2 border-white flex items-center justify-center text-xs">✓</div>
               </div>
               <div>

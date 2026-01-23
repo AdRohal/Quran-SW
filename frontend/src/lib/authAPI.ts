@@ -4,9 +4,6 @@ const API_BASE_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Add token to requests if available
@@ -14,6 +11,10 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Don't set Content-Type for multipart/form-data - let axios handle it
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
   }
   return config;
 });
@@ -47,6 +48,23 @@ export const authAPI = {
 
   logout: async () => {
     const response = await api.post('/auth/logout');
+    return response.data;
+  },
+
+  updateProfile: async (data: { name: string; email: string; bio: string; image?: File }) => {
+    const formData = new FormData();
+    formData.append('full_name', data.name);
+    formData.append('email', data.email);
+    formData.append('bio', data.bio);
+    if (data.image) {
+      console.log('Adding image to FormData:', data.image.name, data.image.size, 'bytes');
+      formData.append('image', data.image);
+    } else {
+      console.log('No image file to upload');
+    }
+
+    console.log('Sending FormData with keys:', Array.from(formData.entries()).map(([k]) => k));
+    const response = await api.post('/auth/update-profile', formData);
     return response.data;
   },
 };
