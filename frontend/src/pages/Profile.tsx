@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Bell, Lock, Moon, Share2, LogOut, ChevronRight, ArrowLeft, Mail, Lock as LockIcon, BookOpen, Calendar, Trophy, Award, Camera } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
-import { authAPI } from '../lib/authAPI';
+import { authAPI, readingAPI } from '../lib/authAPI';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -14,6 +14,7 @@ export function Profile() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editSuccess, setEditSuccess] = useState(false);
+  const [streak, setStreak] = useState({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
   const [formData, setFormData] = useState({
     name: user?.full_name || '',
     email: user?.email || '',
@@ -51,6 +52,21 @@ export function Profile() {
       });
     }
   }, [currentView, user]);
+
+  // Fetch reading streak when user is logged in and profile is displayed
+  useEffect(() => {
+    if (user && currentView === 'main') {
+      const fetchStreak = async () => {
+        try {
+          const streakData = await readingAPI.getStreak();
+          setStreak(streakData);
+        } catch (error) {
+          console.error('Failed to fetch streak:', error);
+        }
+      };
+      fetchStreak();
+    }
+  }, [user, currentView]);
 
   // Show loading screen while checking authentication
   if (authLoading) {
@@ -969,8 +985,8 @@ export function Profile() {
         <div className="grid grid-cols-3 gap-6 mb-12">
           {[
             { Icon: BookOpen, label: 'Surahs Memorized', value: '12' },
-            { Icon: Calendar, label: 'Prayer Streak', value: '15 Days' },
-            { Icon: Trophy, label: 'Points Earned', value: '2,450' },
+            { Icon: Calendar, label: 'Reading Streak', value: `${streak.currentStreak || streak.currentStreak === 0 ? streak.currentStreak : '--'} ${streak.currentStreak || streak.currentStreak === 0 ? 'Days' : ''}` },
+            { Icon: Trophy, label: 'Longest Streak', value: `${streak.longestStreak || streak.longestStreak === 0 ? streak.longestStreak : '--'} ${streak.longestStreak || streak.longestStreak === 0 ? 'Days' : ''}` },
           ].map((stat, idx) => {
             const Icon = stat.Icon;
             return (

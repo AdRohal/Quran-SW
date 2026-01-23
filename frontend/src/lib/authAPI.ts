@@ -69,4 +69,16 @@ export const authAPI = {
   },
 };
 
+export const readingAPI = {
+  recordRead: async () => {
+    const response = await api.post('/reading/record-read');
+    return response.data;
+  },
+
+  getStreak: async () => {
+    const response = await api.get('/reading/streak');
+    return response.data;
+  },
+};
+
 export default api;

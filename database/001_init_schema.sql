@@ -38,6 +38,16 @@ CREATE TABLE IF NOT EXISTS memorization_progress (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Reading streak table
+CREATE TABLE IF NOT EXISTS reading_streak (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  read_date DATE NOT NULL,
+  is_read BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, read_date)
+);
+
 -- Adkar table
 CREATE TABLE IF NOT EXISTS adkar (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -96,6 +106,8 @@ CREATE INDEX IF NOT EXISTS idx_memorization_user_id ON memorization_progress(use
 CREATE INDEX IF NOT EXISTS idx_adkar_category ON adkar(category);
 CREATE INDEX IF NOT EXISTS idx_prayer_times_location_date ON prayer_times(location, date);
 CREATE INDEX IF NOT EXISTS idx_ayahs_surah_id ON ayahs(surah_id);
+CREATE INDEX IF NOT EXISTS idx_reading_streak_user_id ON reading_streak(user_id);
+CREATE INDEX IF NOT EXISTS idx_reading_streak_date ON reading_streak(read_date);
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -105,6 +117,7 @@ ALTER TABLE adkar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE prayer_times ENABLE ROW LEVEL SECURITY;
 ALTER TABLE surahs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ayahs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reading_streak ENABLE ROW LEVEL SECURITY;
 
 -- Create basic policies
 CREATE POLICY "Users can view their own data" ON users
@@ -121,6 +134,15 @@ CREATE POLICY "Users can update their preferences" ON user_preferences
 
 CREATE POLICY "Users can view their memorization" ON memorization_progress
   FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view their reading streak" ON reading_streak
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can insert their reading streak" ON reading_streak
+  FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can update their reading streak" ON reading_streak
+  FOR UPDATE USING (auth.uid()::text = user_id::text);
 
 -- Public read access to prayer times and Quran data
 CREATE POLICY "Public read access" ON prayer_times

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
 import authRoutes from './routes/auth.js';
+import readingRoutes from './routes/reading.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,6 +22,9 @@ app.use(express.json());
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Reading/Streak routes
+app.use('/api/reading', readingRoutes);
 
 // Route to proxy Quran audio
 app.get('/api/quran/audio/:ayahNumber', async (req, res) => {

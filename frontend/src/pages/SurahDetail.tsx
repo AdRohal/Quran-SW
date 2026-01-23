@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack, Mic } from 'lucide-react'
+import { readingAPI } from '../lib/authAPI'
 
 interface Ayah {
   number: number
@@ -94,6 +95,7 @@ export function SurahDetail() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const reciterFoldersRef = useRef<Record<number, string> | null>(null)
   const ayahRefsRef = useRef<Record<number, HTMLSpanElement | null>>({})
+  const readRecordedRef = useRef<boolean>(false) // Track if we've recorded read for today
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
@@ -316,7 +318,7 @@ export function SurahDetail() {
   // STRICT SEQUENTIAL MATCHING - Focus only on current target ayah
   // Mark as passed only when LAST WORD is spoken
   // Keep highlight visible until FIRST WORD of next ayah is spoken
-  const matchRecognizedText = (fullText: string) => {
+  const matchRecognizedText = async (fullText: string) => {
     if (!fullText || ayahs.length === 0) return
 
     accumulatedTextRef.current = fullText
@@ -393,6 +395,17 @@ export function SurahDetail() {
       const newPassedAyahs = [...passedAyahs, targetAyahNumber]
       setPassedAyahs(newPassedAyahs)
       
+      // Record read if this is Ayah 1 and we haven't recorded yet today
+      if (targetAyahNumber === 1 && !readRecordedRef.current) {
+        readRecordedRef.current = true
+        try {
+          await readingAPI.recordRead()
+          console.log('✅ Reading streak recorded for today!')
+        } catch (error) {
+          console.error('Failed to record reading:', error)
+        }
+      }
+      
       // Move focus to next ayah
       if (targetAyahNumber < ayahs.length) {
         currentFocusAyahRef.current = targetAyahNumber + 1
@@ -427,7 +440,7 @@ export function SurahDetail() {
           accumulatedTextRef.current = ''
         }
 
-        recognitionRef.current.onresult = (event: any) => {
+        recognitionRef.current.onresult = async (event: any) => {
           let interimTranscript = ''
           let finalTranscript = ''
 
@@ -442,7 +455,7 @@ export function SurahDetail() {
 
           const fullText = finalTranscript + interimTranscript
           setRecognizedText(fullText)
-          matchRecognizedText(fullText)
+          await matchRecognizedText(fullText)
         }
 
         recognitionRef.current.onerror = (event: any) => {
