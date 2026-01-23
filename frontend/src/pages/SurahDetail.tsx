@@ -670,8 +670,8 @@ export function SurahDetail() {
             </div>
 
             <div
-              className="text-right leading-loose text-gray-800 break-words"
-              style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px` }}
+              className="text-right text-gray-800 break-words"
+              style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px`, lineHeight: '2.5' }}
             >
               {ayahs.map((ayah, index) => (
                 <span
@@ -680,12 +680,12 @@ export function SurahDetail() {
                     if (el) ayahRefsRef.current[ayah.numberInSurah] = el
                   }}
                   onContextMenu={(e) => handleAyahContextMenu(e, index)}
-                  className={`inline transition-all duration-100 rounded px-1 cursor-context-menu hover:bg-green-300/40 ${
+                  className={`inline transition-all duration-100 rounded px-1 cursor-context-menu ${
                     currentAyahPlaying === ayah.numberInSurah && isPlaying
-                      ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md leading-tight'
-                      : ''
+                      ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md'
+                      : 'hover:bg-green-300/40'
                   }`}
-                  style={{ direction: 'rtl' }}
+                  style={{ direction: 'rtl', padding: '0.125rem 0.25rem' }}
                 >
                   {ayah.text}
                   <span className="relative inline-flex items-center justify-center mx-2 align-middle">
