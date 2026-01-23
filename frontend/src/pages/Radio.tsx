@@ -76,7 +76,7 @@ export function Radio() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="mx-auto px-6 md:px-12 lg:px-16 py-6">
         {/* Header with Search */}
         <div className="bg-white rounded-xl p-8 shadow-md sticky top-0 z-10 mb-8">

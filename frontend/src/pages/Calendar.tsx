@@ -173,7 +173,7 @@ export function Calendar() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full px-6 md:px-12 lg:px-16 pb-10">
+    <div className="space-y-6 w-full max-w-full px-6 md:px-12 lg:px-16 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Islamic Calendar</h1>

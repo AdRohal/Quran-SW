@@ -201,7 +201,7 @@ export function Adkar() {
     const IconComponent = categoryInfo.icon;
     
     return (
-      <div className="min-h-screen">
+      <div>
         <div className="mx-auto px-6 md:px-12 lg:px-16 py-8">
           {/* Header with Back Button */}
           <div className="flex items-center gap-4 mb-8">
@@ -317,7 +317,7 @@ export function Adkar() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="mx-auto px-6 md:px-12 lg:px-16 py-8">
         {/* Header */}
         <div className="text-center mb-10">

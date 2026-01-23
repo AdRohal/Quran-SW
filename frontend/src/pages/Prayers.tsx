@@ -160,7 +160,7 @@ export function Prayers() {
   }, [next]);
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className="mx-auto px-6 md:px-12 lg:px-16 py-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-8">

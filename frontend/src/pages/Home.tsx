@@ -252,7 +252,7 @@ export function Home() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full px-6 md:px-12 lg:px-16 pb-10">
+    <div className="space-y-6 w-full max-w-full px-6 md:px-12 lg:px-16 pb-6">
       {/* Hidden audio elements */}
       <audio
         ref={audioRef}
@@ -374,7 +374,7 @@ export function Home() {
                       {holiday.type === 'Major' && <div className="w-1.5 h-1.5 rounded-full bg-teal-700 animate-pulse" />}
                     </div>
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{holiday.date}</p>
-                    <p className="text-teal-700/70 text-sm" style={{ fontFamily: "var(--font-arabic)" }}>{holiday.arabicName}</p>
+                    <p className="text-teal-700/70 font-semibold" style={{ fontFamily: "var(--font-arabic)", fontSize: "1rem" }}>{holiday.arabicName}</p>
                   </div>
                 </div>
               </div>

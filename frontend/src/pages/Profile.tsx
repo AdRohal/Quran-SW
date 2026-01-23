@@ -775,7 +775,7 @@ export function Profile() {
 
   // Main View
   return (
-    <div className="min-h-screen bg-white">
+    <div className="bg-white">
       <div className="mx-auto px-6 md:px-12 lg:px-16 py-8">
         {/* Profile Header Card */}
         <div className="bg-gradient-to-r from-teal-700 to-teal-600 text-white rounded-2xl p-8 shadow-lg mb-8">
