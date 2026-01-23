@@ -83,8 +83,21 @@ export function Home() {
   const [audioLoading, setAudioLoading] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null)
   const [adhanPlaying, setAdhanPlaying] = useState(false)
+  const [lastReadSurah, setLastReadSurah] = useState<{ surahNumber: string; surahName: string } | null>(null)
   const adhanAudioRef = useRef<HTMLAudioElement>(null)
   const notifiedPrayersRef = useRef<Set<string>>(new Set())
+
+  // Load last read surah from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lastReadSurah')
+      if (saved) {
+        setLastReadSurah(JSON.parse(saved))
+      }
+    } catch (error) {
+      console.error('Failed to load last read surah:', error)
+    }
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -307,10 +320,28 @@ export function Home() {
             </p>
           </div>
           <div className="flex gap-3">
-            <button className="bg-white text-primary font-medium px-6 py-2.5 rounded-full text-sm hover:bg-gray-100 transition">
-              Continue Reading
+            <button 
+              onClick={() => {
+                console.log('Continue Reading clicked:', lastReadSurah)
+                if (lastReadSurah && lastReadSurah.surahNumber) {
+                  console.log('Navigating to surah:', lastReadSurah.surahNumber)
+                  navigate(`/quran/surah/${lastReadSurah.surahNumber}`)
+                } else {
+                  console.log('No surah found, navigating to /quran')
+                  navigate('/quran')
+                }
+              }}
+              className="bg-white text-primary font-medium px-6 py-2.5 rounded-full text-sm hover:bg-gray-100 transition cursor-pointer"
+            >
+              {lastReadSurah ? `Continue: ${lastReadSurah.surahName}` : 'Continue Reading'}
             </button>
-            <button className="bg-gray-800/50 text-white font-medium px-6 py-2.5 rounded-full text-sm hover:bg-gray-800/70 transition">
+            <button 
+              onClick={() => {
+                console.log('Daily Adkar clicked')
+                navigate('/adkar')
+              }}
+              className="bg-gray-800/50 text-white font-medium px-6 py-2.5 rounded-full text-sm hover:bg-gray-800/70 transition cursor-pointer"
+            >
               Daily Adkar
             </button>
           </div>

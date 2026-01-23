@@ -96,6 +96,7 @@ export function SurahDetail() {
   const reciterFoldersRef = useRef<Record<number, string> | null>(null)
   const ayahRefsRef = useRef<Record<number, HTMLSpanElement | null>>({})
   const readRecordedRef = useRef<boolean>(false) // Track if we've recorded read for today
+  const contentContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchSurahDetail = async () => {
@@ -149,6 +150,69 @@ export function SurahDetail() {
 
     fetchSurahDetail()
   }, [surahNumber, qiraat])
+
+  // Save last read surah to localStorage
+  useEffect(() => {
+    if (surah && surahNumber) {
+      localStorage.setItem('lastReadSurah', JSON.stringify({
+        surahNumber: surahNumber,
+        surahName: surah.englishName || surah.name,
+        scrollPosition: contentContainerRef.current?.scrollTop || 0,
+        fontSize: fontSize,
+        qiraat: qiraat,
+        selectedReciter: selectedReciter,
+        selectedTranslation: selectedTranslation,
+        viewMode: viewMode
+      }))
+    }
+  }, [surah, surahNumber, fontSize, qiraat, selectedReciter, selectedTranslation, viewMode])
+
+  // Track scroll position periodically
+  useEffect(() => {
+    const handleScroll = () => {
+      if (surah && surahNumber && contentContainerRef.current) {
+        const stored = localStorage.getItem('lastReadSurah')
+        if (stored) {
+          const data = JSON.parse(stored)
+          data.scrollPosition = contentContainerRef.current.scrollTop
+          localStorage.setItem('lastReadSurah', JSON.stringify(data))
+        }
+      }
+    }
+
+    const container = contentContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
+    }
+  }, [surah, surahNumber])
+
+  // Restore last reading session
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lastReadSurah')
+      if (saved) {
+        const data = JSON.parse(saved)
+        // Only restore settings if we're on the same surah
+        if (data.surahNumber === surahNumber) {
+          if (data.fontSize) setFontSize(data.fontSize)
+          if (data.qiraat) setQiraat(data.qiraat)
+          if (data.selectedReciter) setSelectedReciter(data.selectedReciter)
+          if (data.selectedTranslation) setSelectedTranslation(data.selectedTranslation)
+          if (data.viewMode) setViewMode(data.viewMode)
+          
+          // Restore scroll position after content is rendered
+          setTimeout(() => {
+            if (contentContainerRef.current && data.scrollPosition) {
+              contentContainerRef.current.scrollTop = data.scrollPosition
+            }
+          }, 100)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore reading session:', error)
+    }
+  }, [surahNumber])
 
   // Fetch translations when selected translation changes
   useEffect(() => {
@@ -872,7 +936,10 @@ export function SurahDetail() {
       )}
 
       {viewMode === 'continuous' && (
-        <div className="bg-white rounded-lg p-12 shadow-md border border-gray-100">
+        <div 
+          ref={contentContainerRef}
+          className="bg-white rounded-lg p-12 shadow-md border border-gray-100 max-h-screen overflow-y-auto"
+        >
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-4xl font-bold text-teal-700 mb-2">{surah.name}</h2>
