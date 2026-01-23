@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack } from 'lucide-react'
 
 interface Ayah {
   number: number
@@ -82,6 +82,7 @@ export function SurahDetail() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentAyahPlaying, setCurrentAyahPlaying] = useState<number | null>(null)
   const [showReciterMenu, setShowReciterMenu] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; ayahIndex: number | null }>({ visible: false, x: 0, y: 0, ayahIndex: null })
   const audioRef = useRef<HTMLAudioElement>(null)
   const nextAudioRef = useRef<HTMLAudioElement>(null)
   const isPlayingSequenceRef = useRef<boolean>(false)
@@ -196,6 +197,61 @@ export function SurahDetail() {
       }
     }
   }, [currentAyahPlaying, isPlaying, viewMode])
+
+  // Close context menu when clicking elsewhere
+  useEffect(() => {
+    const handleClick = () => {
+      setContextMenu({ visible: false, x: 0, y: 0, ayahIndex: null })
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
+  // Handle right-click on ayah
+  const handleAyahContextMenu = (e: React.MouseEvent, ayahIndex: number) => {
+    e.preventDefault()
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      ayahIndex,
+    })
+  }
+
+  // Play from this ayah onwards
+  const playFromAyah = (ayahIndex: number) => {
+    if (!audioRef.current || !surah || ayahs.length === 0) return
+
+    isPlayingSequenceRef.current = true
+    currentVerseIndexRef.current = ayahIndex
+    setIsPlaying(true)
+
+    audioRef.current.onended = () => {
+      currentVerseIndexRef.current += 1
+      if (currentVerseIndexRef.current < ayahs.length && isPlayingSequenceRef.current) {
+        playVerseByIndex(currentVerseIndexRef.current)
+      } else {
+        isPlayingSequenceRef.current = false
+        setIsPlaying(false)
+        setCurrentAyahPlaying(null)
+      }
+    }
+
+    playVerseByIndex(ayahIndex)
+    setContextMenu({ visible: false, x: 0, y: 0, ayahIndex: null })
+  }
+
+  // Copy ayah text to clipboard
+  const copyAyah = (ayahIndex: number) => {
+    const ayah = ayahs[ayahIndex]
+    if (ayah) {
+      navigator.clipboard.writeText(ayah.text).then(() => {
+        // Optional: Show a toast notification
+        console.log('Ayah copied to clipboard')
+      })
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, ayahIndex: null })
+  }
 
   const playAyah = () => {
     if (!audioRef.current || !surah || ayahs.length === 0) return
@@ -617,13 +673,14 @@ export function SurahDetail() {
               className="text-right leading-loose text-gray-800 break-words"
               style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px` }}
             >
-              {ayahs.map((ayah) => (
+              {ayahs.map((ayah, index) => (
                 <span
                   key={ayah.number}
                   ref={(el) => {
                     if (el) ayahRefsRef.current[ayah.numberInSurah] = el
                   }}
-                  className={`inline transition-all duration-100 rounded px-1 ${
+                  onContextMenu={(e) => handleAyahContextMenu(e, index)}
+                  className={`inline transition-all duration-100 rounded px-1 cursor-context-menu hover:bg-green-300/40 ${
                     currentAyahPlaying === ayah.numberInSurah && isPlaying
                       ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md leading-tight'
                       : ''
@@ -730,6 +787,38 @@ export function SurahDetail() {
           <span className="font-bold text-teal-700">{surah.numberOfAyahs}</span> Ayahs
         </p>
       </div>
-    </div>
+
+      {/* Context Menu */}
+      {contextMenu.visible && contextMenu.ayahIndex !== null && (
+        <div
+          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden"
+          style={{
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+          }}
+        >
+          <button
+            onClick={() => playFromAyah(contextMenu.ayahIndex!)}
+            className="flex items-center gap-3 w-full text-left px-4 py-3 hover:bg-teal-50 text-gray-700 hover:text-teal-700 font-semibold transition border-b border-gray-100 hover:border-teal-200"
+          >
+            <SkipBack size={18} className="text-teal-600" />
+            Start from this Ayah
+          </button>
+          <button
+            onClick={() => playSingleAyah(contextMenu.ayahIndex!)}
+            className="flex items-center gap-3 w-full text-left px-4 py-3 hover:bg-teal-50 text-gray-700 hover:text-teal-700 font-semibold transition border-b border-gray-100 hover:border-teal-200"
+          >
+            <Play size={18} className="text-teal-600" />
+            Play this Ayah only
+          </button>
+          <button
+            onClick={() => copyAyah(contextMenu.ayahIndex!)}
+            className="flex items-center gap-3 w-full text-left px-4 py-3 hover:bg-teal-50 text-gray-700 hover:text-teal-700 font-semibold transition hover:border-teal-200"
+          >
+            <Copy size={18} className="text-teal-600" />
+            Copy Ayah
+          </button>
+        </div>
+      )}    </div>
   )
 }
