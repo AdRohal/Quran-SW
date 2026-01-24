@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextPrayer, getCurrentPosition, getPrayerTimesByCoords, HijriDate } from '../lib/prayerTimes'
 import { getDailyVerse, getUpcomingHolidays, QuranVerse, getAyahAudio, isPrayerTime, getNextPrayerTime, getAdhanAudio } from '../lib/quran'
+import { readingAPI } from '../lib/authAPI'
 
 // Hijri month names in Arabic
 const HIJRI_MONTHS = [
@@ -84,6 +85,7 @@ export function Home() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null)
   const [adhanPlaying, setAdhanPlaying] = useState(false)
   const [lastReadSurah, setLastReadSurah] = useState<{ surahNumber: string; surahName: string } | null>(null)
+  const [memorizedSurahs, setMemorizedSurahs] = useState<any[]>([])
   const adhanAudioRef = useRef<HTMLAudioElement>(null)
   const notifiedPrayersRef = useRef<Set<string>>(new Set())
 
@@ -151,7 +153,53 @@ export function Home() {
     })()
   }, [])
 
-  // Monitor prayer times and show Adhan notification
+  // Fetch memorization data
+  useEffect(() => {
+    (async () => {
+      try {
+        // Fetch all surahs from API
+        const response = await fetch('https://api.alquran.cloud/v1/surah')
+        const data = await response.json()
+        
+        if (data.data && Array.isArray(data.data)) {
+          const memorizedData: any[] = []
+
+          // Fetch memorization progress for all surahs in parallel
+          const memPromises = data.data.map(async (surah: any) => {
+            try {
+              const progress = await readingAPI.getMemorizationProgress(surah.number)
+              // Use totalPercentage from API response
+              if (progress && progress.totalPercentage > 0) {
+                return {
+                  number: surah.number,
+                  name: surah.name,
+                  englishName: surah.englishName,
+                  englishNameTranslation: surah.englishNameTranslation,
+                  numberOfAyahs: surah.numberOfAyahs,
+                  percentage: progress.totalPercentage,
+                }
+              }
+              return null
+            } catch (error) {
+              console.warn(`Failed to fetch memorization for surah ${surah.number}:`, error)
+              return null
+            }
+          })
+
+          const results = await Promise.all(memPromises)
+          const filteredData = results.filter(item => item !== null)
+
+          // Sort: First fully memorized (100%) by most recent, then others by percentage descending
+          const fullyMemorized = filteredData.filter((s: any) => s.percentage === 100).reverse()
+          const partialMemorized = filteredData.filter((s: any) => s.percentage < 100).sort((a: any, b: any) => b.percentage - a.percentage)
+          
+          setMemorizedSurahs([...fullyMemorized, ...partialMemorized])
+        }
+      } catch (error) {
+        console.error('Failed to fetch memorization data:', error)
+      }
+    })()
+  }, [])
   useEffect(() => {
     if (!timings || !('Notification' in window)) return
 
@@ -463,36 +511,39 @@ export function Home() {
 
         {/* Memorization */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-gray-800">Memorization</h2>
-            <button className="text-primary text-sm font-medium">View All</button>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-bold text-xl text-gray-800">Memorization</h2>
+            <button onClick={() => navigate('/quran')} className="text-primary text-sm font-medium hover:underline">View All</button>
           </div>
-          <div className="space-y-4">
-            {[
-              { name: 'Surah Al-Mulk', subtitle: 'The Sovereignty', number: 67, ayahs: 30, progress: 85 },
-              { name: 'Surah Ya-Sin', subtitle: 'Ya Sin', number: 36, ayahs: 83, progress: 10 },
-            ].map((surah) => (
-              <div key={surah.number} className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                    {surah.number}
+          <div className="space-y-6">
+            {memorizedSurahs.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-8">No memorized surahs yet. Start memorizing!</p>
+            ) : (
+              memorizedSurahs.slice(0, 3).map((surah) => (
+                <div key={surah.number} className="cursor-pointer hover:opacity-80 transition" onClick={() => navigate(`/surah/${surah.number}`)}>
+                  <div className="flex items-start gap-4 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {surah.number}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-bold text-gray-900 text-base">{surah.name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{surah.englishNameTranslation} • {surah.numberOfAyahs} Ayahs</p>
+                        </div>
+                        <p className="text-primary font-bold text-lg">{surah.percentage}%</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-gray-800 text-sm">{surah.name}</p>
-                      <p className="text-primary font-bold text-sm">{surah.progress}%</p>
-                    </div>
-                    <p className="text-xs text-gray-400">{surah.subtitle} • {surah.ayahs} Ayahs</p>
-                    <div className="bg-gray-200 rounded-full h-1.5 mt-2 overflow-hidden">
-                      <div
-                        className="bg-primary h-full rounded-full"
-                        style={{ width: `${surah.progress}%` }}
-                      />
-                    </div>
+                  <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-primary h-full rounded-full transition-all duration-300"
+                      style={{ width: `${surah.percentage}%` }}
+                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

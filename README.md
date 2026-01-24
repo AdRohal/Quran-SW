@@ -1,6 +1,6 @@
 # Quran SW - Islamic Learning Platform
 
-A comprehensive Islamic learning application built with React, TypeScript, and Vite. Features Quranic recitations, prayer times, Islamic calendar, Qibla finder, radio streams, and more.
+A comprehensive Islamic learning application built with React, TypeScript, and Vite. Features Quranic recitations, prayer times, Islamic calendar, Qibla map, radio streams, and more.
 
 ## 🌟 Features
 
@@ -22,7 +22,7 @@ A comprehensive Islamic learning application built with React, TypeScript, and V
 
 - **🕌 Prayer Times**: Accurate Islamic prayer times based on location
 - **📅 Islamic Calendar**: Track Islamic holidays and events
-- **🧭 Qibla Finder**: Real-time Qibla direction using device location
+- **🧭 Qibla Map**: Real-time Qibla direction using device location
 - **📻 Quran Radio**: Live Islamic radio streams
 - **🌙 Adkar**: Islamic supplications and remembrances
 - **👤 Profile**: User preferences and settings
@@ -157,7 +157,7 @@ Quran-SW/ (Monorepo)
 │   │   │   ├── Navigation.tsx
 │   │   │   ├── LiveMiniPlayer.tsx
 │   │   │   ├── RadioMiniPlayer.tsx
-│   │   │   └── QiblaFinder.tsx
+│   │   │   └── QiblaMap.tsx
 │   │   ├── contexts/       # React Context for state management
 │   │   │   └── LiveContext.ts
 │   │   ├── hooks/          # Custom React hooks

@@ -15,6 +15,7 @@ export function Profile() {
   const [error, setError] = useState('');
   const [editSuccess, setEditSuccess] = useState(false);
   const [streak, setStreak] = useState({ currentStreak: 0, longestStreak: 0, lastReadDate: null });
+  const [memorizedSurahsCount, setMemorizedSurahsCount] = useState(0);
   const [formData, setFormData] = useState({
     name: user?.full_name || '',
     email: user?.email || '',
@@ -56,15 +57,20 @@ export function Profile() {
   // Fetch reading streak when user is logged in and profile is displayed
   useEffect(() => {
     if (user && currentView === 'main') {
-      const fetchStreak = async () => {
+      const fetchData = async () => {
         try {
           const streakData = await readingAPI.getStreak();
           setStreak(streakData);
+          
+          // Fetch memorized surahs count
+          const memorizedData = await readingAPI.getMemorizedSurahsCount();
+          setMemorizedSurahsCount(memorizedData.memorizedSurahs || 0);
         } catch (error) {
-          console.error('Failed to fetch streak:', error);
+          console.error('Failed to fetch data:', error);
+          setMemorizedSurahsCount(0);
         }
       };
-      fetchStreak();
+      fetchData();
     }
   }, [user, currentView]);
 
@@ -984,7 +990,7 @@ export function Profile() {
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-6 mb-12">
           {[
-            { Icon: BookOpen, label: 'Surahs Memorized', value: '12' },
+            { Icon: BookOpen, label: 'Surahs Memorized', value: `${memorizedSurahsCount}` },
             { Icon: Calendar, label: 'Reading Streak', value: `${streak.currentStreak || streak.currentStreak === 0 ? streak.currentStreak : '--'} ${streak.currentStreak || streak.currentStreak === 0 ? 'Days' : ''}` },
             { Icon: Trophy, label: 'Longest Streak', value: `${streak.longestStreak || streak.longestStreak === 0 ? streak.longestStreak : '--'} ${streak.longestStreak || streak.longestStreak === 0 ? 'Days' : ''}` },
           ].map((stat, idx) => {

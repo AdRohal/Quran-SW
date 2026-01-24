@@ -174,7 +174,7 @@ export function Prayers() {
               className="flex items-center gap-2 border-2 border-gray-400 text-gray-700 px-5 py-2 rounded-full font-semibold hover:border-gray-500 transition"
             >
               <Navigation size={20} />
-              Qibla Finder
+              Qibla Map
             </button>
             <button
               onClick={() => setShowSettings(!showSettings)}

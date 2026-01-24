@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, Navigation } from 'lucide-react'
 
-interface QiblaFinderProps {
+interface QiblaMapProps {
   isOpen: boolean
   onClose: () => void
 }
@@ -9,7 +9,7 @@ interface QiblaFinderProps {
 const MECCA_LAT = 21.4225
 const MECCA_LON = 39.8262
 
-export function QiblaFinder({ isOpen, onClose }: QiblaFinderProps) {
+export function QiblaMap({ isOpen, onClose }: QiblaMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null)
   const [qiblaDirection, setQiblaDirection] = useState<number | null>(null)
@@ -170,7 +170,7 @@ export function QiblaFinder({ isOpen, onClose }: QiblaFinderProps) {
         <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 text-white p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Navigation className="w-6 h-6" />
-            <h2 className="text-2xl font-bold">Qibla Finder</h2>
+            <h2 className="text-2xl font-bold">Qibla Map</h2>
           </div>
           <button
             onClick={onClose}

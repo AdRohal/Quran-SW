@@ -79,6 +79,38 @@ export const readingAPI = {
     const response = await api.get('/reading/streak');
     return response.data;
   },
+
+  saveMemorization: async (surahNumber: number, ayahStart: number, ayahEnd: number) => {
+    const response = await api.post('/reading/save-memorization', {
+      surahNumber,
+      ayahStart,
+      ayahEnd,
+    });
+    return response.data;
+  },
+
+  saveSessionMemorization: async (surahNumber: number, passedAyahs: number[]) => {
+    const response = await api.post('/reading/save-session-memorization', {
+      surahNumber,
+      passedAyahs,
+    });
+    return response.data;
+  },
+
+  getMoralizationProgress: async (surahNumber: number) => {
+    const response = await api.get(`/reading/memorization/${surahNumber}`);
+    return response.data;
+  },
+
+  getMemorizationProgress: async (surahNumber: number) => {
+    const response = await api.get(`/reading/memorization/${surahNumber}`);
+    return response.data;
+  },
+
+  getMemorizedSurahsCount: async () => {
+    const response = await api.get(`/reading/memorized-surahs-count`);
+    return response.data;
+  },
 };
 
 export default api;
