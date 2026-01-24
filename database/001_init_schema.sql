@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS memorization_progress (
   ayah_end INT NOT NULL,
   percentage INT DEFAULT 0 CHECK (percentage >= 0 AND percentage <= 100),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, surah_number, ayah_start, ayah_end)
 );
 
 -- Reading streak table

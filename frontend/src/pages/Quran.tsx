@@ -175,11 +175,11 @@ export function Quran() {
                         <span className="text-sm font-semibold text-gray-700">
                           {memData.memorizedCount}/{memData.totalAyahs} Ayahs
                         </span>
-                        <span className="text-sm font-bold text-purple-700">{memData.percentage}%</span>
+                        <span className="text-sm font-bold text-teal-700">{memData.percentage}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                         <div
-                          className="bg-gradient-to-r from-purple-500 to-blue-500 h-full transition-all duration-300"
+                          className="bg-teal-700 h-full transition-all duration-300 rounded-full"
                           style={{ width: `${memData.percentage}%` }}
                         />
                       </div>

@@ -1317,14 +1317,27 @@ export function SurahDetail() {
                   
                   <button 
                     onClick={async () => {
+                      console.log(`🔍 Exit button clicked - isMemorizeMode: ${isMemorizeMode}, passedAyahs: ${JSON.stringify(passedAyahs)}, surah: ${surah?.number}`)
+                      
                       // Save session progress before exiting memorize mode
                       if (isMemorizeMode && passedAyahs.length > 0 && surah) {
                         try {
-                          await readingAPI.saveSessionMemorization(surah.number, passedAyahs)
+                          console.log(`💾 Saving ${passedAyahs.length} ayahs for surah ${surah.number}`)
+                          const saveResponse = await readingAPI.saveSessionMemorization(surah.number, passedAyahs)
+                          console.log(`💾 Save response:`, saveResponse)
                           console.log(`💾 Session memorization saved for ${passedAyahs.length} ayahs`)
+                          
+                          // Fetch updated memorization progress after saving
+                          const progress = await readingAPI.getMemorizationProgress(surah.number)
+                          if (progress) {
+                            setMemorizationPercentage(progress.totalPercentage || 0)
+                            console.log(`📊 Updated memorization percentage: ${progress.totalPercentage}%`)
+                          }
                         } catch (error) {
                           console.error('Failed to save session memorization:', error)
                         }
+                      } else {
+                        console.log(`⚠️ Save skipped - isMemorizeMode: ${isMemorizeMode}, passedAyahs.length: ${passedAyahs.length}, hasSurah: ${!!surah}`)
                       }
                       
                       // If entering memorize mode, start recording automatically

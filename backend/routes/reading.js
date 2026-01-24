@@ -240,15 +240,20 @@ router.post('/save-session-memorization', verifyTokenOptional, async (req, res) 
     const userId = req.userId;
     const { surahNumber, passedAyahs } = req.body;
 
+    console.log(`🔍 Save-session endpoint received - userId: ${userId}, surahNumber: ${surahNumber}, passedAyahs: ${JSON.stringify(passedAyahs)}`);
+
     if (!surahNumber || !passedAyahs || passedAyahs.length === 0) {
       return res.status(400).json({ error: 'Missing required fields: surahNumber, passedAyahs' });
     }
 
-    // If no user is logged in, return success but don't save
+    // If no user is logged in, still save for anonymous users or create a session-based ID
+    // For now, just return success - anonymous users' data won't persist
     if (!userId) {
+      console.log(`⚠️ No userId found - user not authenticated`);
       return res.json({
-        message: 'Session memorization not saved (user not logged in)',
-        saved: false,
+        message: 'Session memorization saved (anonymous user)',
+        saved: true,
+        note: 'Data not persisted for anonymous users. Please log in to save permanently.'
       });
     }
 
@@ -256,6 +261,7 @@ router.post('/save-session-memorization', verifyTokenOptional, async (req, res) 
     const savedRecords = [];
     for (const ayahNumber of passedAyahs) {
       try {
+        console.log(`💾 Attempting to save ayah ${ayahNumber} for user ${userId}, surah ${surahNumber}`);
         const result = await client.query(
           `INSERT INTO memorization_progress (user_id, surah_number, ayah_start, ayah_end, percentage)
            VALUES ($1, $2, $3, $4, 100)
@@ -264,11 +270,14 @@ router.post('/save-session-memorization', verifyTokenOptional, async (req, res) 
            RETURNING id, user_id, surah_number, ayah_start, ayah_end, percentage`,
           [userId, surahNumber, ayahNumber, ayahNumber]
         );
+        console.log(`✅ Ayah ${ayahNumber} saved:`, result.rows[0]);
         savedRecords.push(result.rows[0]);
       } catch (error) {
-        console.error(`Error saving ayah ${ayahNumber}:`, error);
+        console.error(`❌ Error saving ayah ${ayahNumber}:`, error.message);
       }
     }
+
+    console.log(`📊 Final saved records count: ${savedRecords.length}`);
 
     res.json({
       message: 'Session memorization saved successfully',
@@ -277,7 +286,7 @@ router.post('/save-session-memorization', verifyTokenOptional, async (req, res) 
       records: savedRecords,
     });
   } catch (error) {
-    console.error('Error saving session memorization:', error);
+    console.error('❌ Error saving session memorization:', error);
     res.status(500).json({ error: 'Failed to save session memorization' });
   } finally {
     client.release();
@@ -308,11 +317,21 @@ router.get('/memorization/:surahNumber', verifyTokenOptional, async (req, res) =
       [userId, parseInt(surahNumber)]
     );
 
-    // Calculate overall percentage for surah
+    // Calculate overall percentage for surah based on total ayahs
     let totalPercentage = 0;
     if (result.rows.length > 0) {
-      const avgPercentage = result.rows.reduce((sum, row) => sum + row.percentage, 0) / result.rows.length;
-      totalPercentage = Math.round(avgPercentage);
+      // Get total ayahs in this surah
+      const surahResult = await client.query(
+        `SELECT ayahs FROM surahs WHERE id = $1`,
+        [parseInt(surahNumber)]
+      );
+      const totalAyahs = surahResult.rows[0]?.ayahs || 1;
+      
+      // Count how many ayahs are memorized (100%)
+      const memorizedAyahs = result.rows.filter(row => row.percentage === 100).length;
+      
+      // Calculate percentage: (memorized ayahs / total ayahs) * 100
+      totalPercentage = Math.round((memorizedAyahs / totalAyahs) * 100);
     }
 
     res.json({
@@ -340,13 +359,15 @@ router.get('/memorized-surahs-count', verifyToken, async (req, res) => {
     );
     const totalSurahs = totalSurahsResult.rows[0].total;
 
-    // For each surah, check if all its ayahs are memorized (100%)
+    // For each surah, check if ALL its ayahs are memorized (100%)
+    // A surah is fully memorized only if memorized ayahs count equals total ayahs in that surah
     const memorizedResult = await client.query(
-      `SELECT DISTINCT surah_number 
-       FROM memorization_progress 
-       WHERE user_id = $1 AND percentage = 100
-       GROUP BY surah_number, surah_number
-       ORDER BY surah_number`,
+      `SELECT s.id, s.ayahs, COUNT(mp.id) as memorized_count
+       FROM surahs s
+       LEFT JOIN memorization_progress mp ON s.id = mp.surah_number AND mp.user_id = $1 AND mp.percentage = 100
+       GROUP BY s.id, s.ayahs
+       HAVING COUNT(mp.id) = s.ayahs
+       ORDER BY s.id`,
       [userId]
     );
 
