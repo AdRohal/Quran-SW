@@ -1,0 +1,42 @@
+{
+  "qiraah": "hafs",
+  "surah": {
+    "number": 112,
+    "name_ar": "الإخلاص",
+    "name_en": "Al-Ikhlas",
+    "type": "makkiyah",
+    "ayahs": [
+      { "number": 1, "text": "قُلْ هُوَ اللَّهُ أَحَدٌ", "juz": 30, "page": 597, "manzil": 30,
+        "words": [
+          { "text": "قل", "letters": ["ق","ل"] },
+          { "text": "هو", "letters": ["ه","و"] },
+          { "text": "الله", "letters": ["ا","ل","ل","ه"] },
+          { "text": "أحد", "letters": ["ا","ح","د"] }
+        ]
+      },
+      { "number": 2, "text": "اللَّهُ الصَّمَدُ", "juz": 30, "page": 597, "manzil": 30,
+        "words": [
+          { "text": "الله", "letters": ["ا","ل","ل","ه"] },
+          { "text": "الصمد", "letters": ["ا","ل","ص","م","د"] }
+        ]
+      },
+      { "number": 3, "text": "لَمْ يَلِدْ وَلَمْ يُولَدْ", "juz": 30, "page": 597, "manzil": 30,
+        "words": [
+          { "text": "لم", "letters": ["ل","م"] },
+          { "text": "يلد", "letters": ["ي","ل","د"] },
+          { "text": "ولم", "letters": ["و","ل","م"] },
+          { "text": "يولد", "letters": ["ي","و","ل","د"] }
+        ]
+      },
+      { "number": 4, "text": "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ", "juz": 30, "page": 597, "manzil": 30,
+        "words": [
+          { "text": "ولم", "letters": ["و","ل","م"] },
+          { "text": "يكن", "letters": ["ي","ك","ن"] },
+          { "text": "له", "letters": ["ل","ه"] },
+          { "text": "كفوا", "letters": ["ك","ف","و"] },
+          { "text": "أحد", "letters": ["ا","ح","د"] }
+        ]
+      }
+    ]
+  }
+}
