@@ -20,6 +20,9 @@ app.use(cors());
 // Middleware to parse JSON
 app.use(express.json());
 
+// Serve static JSON Quran files
+app.use('/data/quran', express.static(path.join(__dirname, 'data/quran')));
+
 // Auth routes
 app.use('/api/auth', authRoutes);
 

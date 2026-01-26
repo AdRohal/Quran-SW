@@ -125,6 +125,58 @@ export function Quran() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* TEST CARD: Load Fatiha from JSON file */}
+        <div
+          onClick={() => navigate(`/quran/surah/1?source=json`)}
+          className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 shadow-md hover:shadow-xl transition cursor-pointer border-2 border-orange-300 hover:border-orange-500"
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-widest text-orange-600 mb-1 font-bold">
+                🧪 JSON TEST
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800 mb-1">Al-Fatiha (JSON)</h3>
+              <p className="text-gray-600">Test JSON file display</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="text-3xl text-orange-600 font-bold" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>الفاتحة</p>
+              <div className="bg-gradient-to-br from-orange-500 to-orange-700 text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-xl shadow-lg flex-shrink-0">
+                1
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center text-sm text-gray-500">
+            <span>7 Ayahs</span>
+            <span className="text-orange-600 font-semibold">Test</span>
+          </div>
+        </div>
+
+        {/* TEST CARD: Load Al-Inshiqaq from JSON file - Test Sajdah marker */}
+        <div
+          onClick={() => navigate(`/quran/surah/84?source=json`)}
+          className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 shadow-md hover:shadow-xl transition cursor-pointer border-2 border-purple-300 hover:border-purple-500"
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-widest text-purple-600 mb-1 font-bold">
+                🧪 SAJDAH TEST
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800 mb-1">Al-Inshiqaq (JSON)</h3>
+              <p className="text-gray-600">Test Sajdah marker ۩</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="text-3xl text-purple-600 font-bold" style={{fontFamily: "'Amiri Quran', 'Amiri', serif"}}>الإنشقاق</p>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-xl shadow-lg flex-shrink-0">
+                84
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center text-sm text-gray-500">
+            <span>25 Ayahs</span>
+            <span className="text-purple-600 font-semibold">Test</span>
+          </div>
+        </div>
+
         {surahs
           .filter((surah) => {
             if (!searchQuery) return true

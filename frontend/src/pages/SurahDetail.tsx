@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack, Mic, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Settings, X, Play, Pause, Volume2, Copy, SkipBack, Mic } from 'lucide-react'
 import { readingAPI } from '../lib/authAPI'
 
 interface Ayah {
@@ -8,6 +8,7 @@ interface Ayah {
   text: string
   numberInSurah: number
   translation?: string
+  tajweed?: Array<{letter: string; position: number; rule: string; color: string; description: string}>
 }
 
 interface Surah {
@@ -21,6 +22,7 @@ interface Surah {
 
 type ViewMode = 'verse' | 'continuous'
 type Qiraat = 'hafs' | 'warsh'
+type QuranFont = 'amiri' | 'scheherazade' | 'tajweed'
 
 interface Reciter {
   id: number
@@ -63,6 +65,10 @@ const TRANSLATIONS: Translation[] = [
 export function SurahDetail() {
   const { surahNumber } = useParams<{ surahNumber: string }>()
   const navigate = useNavigate()
+  
+  // Debug: log every render
+  console.log('📝 SurahDetail component rendering, quranFont will be accessed in render')
+  
   const [surah, setSurah] = useState<Surah | null>(null)
   const [ayahs, setAyahs] = useState<Ayah[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,6 +78,7 @@ export function SurahDetail() {
   const [showMic, setShowMic] = useState(false)
   const [fontSize, setFontSize] = useState(30)
   const [qiraat, setQiraat] = useState<Qiraat>('hafs')
+  const [quranFont, setQuranFont] = useState<QuranFont>('amiri')
   const [selectedReciter, setSelectedReciter] = useState<number>(1)
   const [selectedTranslation, setSelectedTranslation] = useState<string>('en.sahih')
   const [showTranslationMenu, setShowTranslationMenu] = useState(false)
@@ -85,7 +92,7 @@ export function SurahDetail() {
   const [passedAyahs, setPassedAyahs] = useState<number[]>([]) // Track passed ayahs: [1, 2, 3...]
   const [isMemorizeMode, setIsMemorizeMode] = useState(false) // Toggle for hiding text
   const [memorizedAyahs, setMemorizedAyahs] = useState<Map<number, boolean>>(new Map()) // Track which ayahs are memorized
-  const [memorizationPercentage, setMemorizationPercentage] = useState(0) // Overall surah memorization %
+  // const [memorizationPercentage, setMemorizationPercentage] = useState(0) // Overall surah memorization % - Disabled for now
   const [matchedWords, setMatchedWords] = useState<Map<number, Set<number>>>(new Map()) // Track matched word POSITIONS (indices) per ayah
   const currentFocusAyahRef = useRef<number>(1) // Current target ayah to match (1-indexed)
   const accumulatedTextRef = useRef<string>('') // All recognized text accumulated
@@ -110,41 +117,90 @@ export function SurahDetail() {
     const fetchSurahDetail = async () => {
       try {
         setLoading(true)
-        const surahRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`)
-        const surahData = await surahRes.json()
-        if (surahData.code === 200) {
-          setSurah(surahData.data)
-        } else {
-          setError('Failed to fetch surah data')
-        }
-
-        if (qiraat === 'warsh') {
-          const warshRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/ar.warsh`)
-          const warshData = await warshRes.json()
-          if (warshData.code === 200) {
-            setAyahs(warshData.data.ayahs)
+        
+        // Check if loading from JSON (test mode)
+        const params = new URLSearchParams(window.location.search)
+        const sourceType = params.get('source')
+        
+        console.log('📡 Source type:', sourceType)
+        
+        if (sourceType === 'json') {
+          // Load from JSON file
+          const jsonQiraah = qiraat === 'warsh' ? 'warsh' : 'hafs'
+          const surahNum = String(surahNumber).padStart(3, '0')
+          const url = `/data/quran/${jsonQiraah}/surah-${surahNum}.json`
+          console.log('📡 Fetching from:', url)
+          
+          const jsonRes = await fetch(url)
+          
+          if (!jsonRes.ok) {
+            throw new Error(`Failed to fetch JSON: ${jsonRes.status} ${jsonRes.statusText}`)
+          }
+          
+          const jsonData = await jsonRes.json()
+          console.log('📡 JSON Data loaded:', jsonData)
+          
+          if (jsonData && jsonData.surah) {
+            const surahData = jsonData.surah
+            setSurah({
+              number: surahData.number,
+              name: surahData.name_ar,
+              englishName: surahData.name_en,
+              englishNameTranslation: surahData.type === 'makkiyah' ? 'Meccan' : 'Medinan',
+              numberOfAyahs: surahData.ayahs.length,
+              revelationType: surahData.type === 'makkiyah' ? 'Meccan' : 'Medinan'
+            })
+            
+            const transformedAyahs = surahData.ayahs.map((ayah: any) => ({
+              number: ayah.number,
+              text: ayah.text,
+              numberInSurah: ayah.number,
+              tajweed: ayah.tajweed,
+            }))
+            console.log('📡 Transformed Ayahs with tajweed:', transformedAyahs)
+            setAyahs(transformedAyahs)
+            console.log(`✅ Loaded Surah ${surahNumber} from JSON file (${jsonQiraah})`)
           } else {
-            setError('Failed to fetch Warsh recitation')
+            setError('Failed to load JSON surah data')
           }
         } else {
-          const response = await fetch(
-            `https://api.quran.com/api/v4/verses/by_chapter/${surahNumber}?language=en&words=false&per_page=300&fields=text_uthmani`
-          )
-          const data = await response.json()
-          if (data.verses) {
-            const transformed = data.verses.map((v: any) => ({
-              number: v.id,
-              text: v.text_uthmani || '',
-              numberInSurah: v.verse_number,
-            }))
-            setAyahs(transformed)
+          // Load from API (default)
+          const surahRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`)
+          const surahData = await surahRes.json()
+          if (surahData.code === 200) {
+            setSurah(surahData.data)
           } else {
-            const fallbackRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`)
-            const fallbackData = await fallbackRes.json()
-            if (fallbackData.code === 200) {
-              setAyahs(fallbackData.data.ayahs)
+            setError('Failed to fetch surah data')
+          }
+
+          if (qiraat === 'warsh') {
+            const warshRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/ar.warsh`)
+            const warshData = await warshRes.json()
+            if (warshData.code === 200) {
+              setAyahs(warshData.data.ayahs)
             } else {
-              setError('Failed to fetch ayahs')
+              setError('Failed to fetch Warsh recitation')
+            }
+          } else {
+            const response = await fetch(
+              `https://api.quran.com/api/v4/verses/by_chapter/${surahNumber}?language=en&words=false&per_page=300&fields=text_uthmani`
+            )
+            const data = await response.json()
+            if (data.verses) {
+              const transformed = data.verses.map((v: any) => ({
+                number: v.id,
+                text: v.text_uthmani || '',
+                numberInSurah: v.verse_number,
+              }))
+              setAyahs(transformed)
+            } else {
+              const fallbackRes = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`)
+              const fallbackData = await fallbackRes.json()
+              if (fallbackData.code === 200) {
+                setAyahs(fallbackData.data.ayahs)
+              } else {
+                setError('Failed to fetch ayahs')
+              }
             }
           }
         }
@@ -165,7 +221,7 @@ export function SurahDetail() {
       try {
         if (!surahNumber) return
         const data = await readingAPI.getMemorizationProgress(parseInt(surahNumber))
-        setMemorizationPercentage(data.totalPercentage)
+        // setMemorizationPercentage(data.totalPercentage) // Disabled for now
         
         // Create a map of memorized ayahs
         const memorizedMap = new Map()
@@ -413,6 +469,77 @@ export function SurahDetail() {
       .trim()
   }
 
+  // Helper function to get font family based on selection
+  const getQuranFontFamily = (): string => {
+    switch (quranFont) {
+      case 'scheherazade':
+        return "'Scheherazade New', serif"
+      case 'tajweed':
+        return "'Amiri', serif"
+      case 'amiri':
+      default:
+        return "'Amiri', serif"
+    }
+  }
+
+  // Helper function to render tajweed colored text from JSON data
+  /* 
+  // TAJWEED RENDERING DISABLED FOR NOW - Keep for future use
+  const renderTajweedText = (ayah: any): React.ReactNode => {
+    if (!ayah.tajweed || ayah.tajweed.length === 0) return ayah.text
+
+    console.log('🎨 Rendering tajweed for:', ayah.text, 'with rules:', ayah.tajweed)
+
+    const tajweedMap = new Map<number, {color: string, description: string}>()
+    
+    // For each tajweed rule, find the nth occurrence of that letter
+    ayah.tajweed.forEach((rule: any) => {
+      const text = ayah.text
+      let occurrenceCount = 0
+      
+      // Find the nth occurrence of the letter
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === rule.letter) {
+          occurrenceCount++
+          if (occurrenceCount === rule.position) {
+            // Found the target occurrence
+            tajweedMap.set(i, { color: rule.color, description: rule.description })
+            console.log(`✅ Found ${rule.letter} at index ${i} (occurrence ${rule.position})`)
+            break
+          }
+        }
+      }
+    })
+
+    const result: React.ReactNode[] = []
+    ayah.text.split('').forEach((letter: string, idx: number) => {
+      const tajweedRule = tajweedMap.get(idx)
+      if (tajweedRule) {
+        result.push(
+          <span
+            key={`tajweed-${idx}`}
+            style={{
+              color: tajweedRule.color,
+              fontWeight: 'bold',
+              textDecoration: 'underline',
+              textDecorationColor: tajweedRule.color,
+              textUnderlineOffset: '2px'
+            }}
+            title={tajweedRule.description}
+          >
+            {letter}
+          </span>
+        )
+      } else {
+        result.push(letter)
+      }
+    })
+
+    console.log('🎨 Tajweed map:', tajweedMap)
+    return result
+  }
+  */
+
   // Helper function to check if two words match - fuzzy matching
   const wordsMatch = (word1: string, word2: string): boolean => {
     // Exact match
@@ -591,7 +718,7 @@ export function SurahDetail() {
           setMemorizedAyahs(newMemorizedMap)
           // Recalculate percentage
           const percentage = Math.round((newMemorizedMap.size / surah.numberOfAyahs) * 100)
-          setMemorizationPercentage(percentage)
+          // setMemorizationPercentage(percentage) // Disabled for now
           console.log(`✅ Ayah ${targetAyahNumber} memorized! Progress: ${percentage}%`)
         } catch (error) {
           console.error('Failed to save memorization:', error)
@@ -1056,7 +1183,8 @@ export function SurahDetail() {
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-4 gap-4">
                   <div className="flex-1">
-                    <p className="text-right text-2xl leading-relaxed text-gray-800 font-semibold mb-4">
+                    {/* Tajweed colors disabled for now */}
+                    <p className={`text-right text-2xl leading-relaxed font-semibold mb-4 ${quranFont === 'tajweed' ? '' : 'text-gray-800'}`} style={{fontFamily: getQuranFontFamily()}}>
                       {ayah.text}
                     </p>
                     {ayah.translation && (
@@ -1130,7 +1258,7 @@ export function SurahDetail() {
 
             <div
               className="text-right text-gray-800 break-words"
-              style={{ fontFamily: "'Amiri Quran', 'Amiri', serif", direction: 'rtl', fontSize: `${fontSize}px`, lineHeight: '2.5' }}
+              style={{ fontFamily: getQuranFontFamily(), direction: 'rtl', fontSize: `${fontSize}px`, lineHeight: '2.5' }}
             >
               {ayahs.map((ayah, index) => {
                 // Use the same normalization as matching function
@@ -1146,7 +1274,7 @@ export function SurahDetail() {
                       if (el) ayahRefsRef.current[ayah.numberInSurah] = el
                     }}
                     onContextMenu={(e) => handleAyahContextMenu(e, index)}
-                    className={`inline transition-all duration-100 rounded px-1 cursor-context-menu ${
+                    className={`inline transition-all duration-100 rounded px-1 cursor-context-menu ${quranFont === 'tajweed' ? '' : 'text-gray-800'} ${
                       currentAyahPlaying === ayah.numberInSurah && isPlaying
                         ? 'bg-yellow-300/60 text-gray-900 font-bold shadow-md'
                         : highlightedAyahs.has(ayah.numberInSurah)
@@ -1183,8 +1311,23 @@ export function SurahDetail() {
                           )
                         })}
                       </>
+                    ) : quranFont === 'tajweed' ? (
+                      // Tajweed colors disabled for now - rendering as normal text
+                      <>{ayah.text}</>
                     ) : (
-                      ayah.text
+                      // Regular text rendering
+                      <>
+                        {ayah.text.split('۞').map((part, idx) => (
+                          <span key={idx}>
+                            {part}
+                            {idx < ayah.text.split('۞').length - 1 && (
+                              <span className="inline-flex items-center justify-center mx-1 px-1 bg-amber-100 rounded-md border border-amber-400" title="Sajdah (Prostration)">
+                                <span className="text-amber-700 font-bold text-lg" style={{fontSize: '1.3em', fontFamily: getQuranFontFamily()}}>۞</span>
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </>
                     )}
 
                     <span className="relative inline-flex items-center justify-center mx-2 align-middle">
@@ -1284,6 +1427,58 @@ export function SurahDetail() {
                   </label>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Quran Font</label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="quranFont"
+                      value="amiri"
+                      checked={quranFont === 'amiri'}
+                      onChange={() => setQuranFont('amiri')}
+                      className="mr-3 accent-teal-700"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">Amiri (Uthmani)</p>
+                      <p className="text-xs text-gray-500">Professional Quranic typeface</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="quranFont"
+                      value="scheherazade"
+                      checked={quranFont === 'scheherazade'}
+                      onChange={() => setQuranFont('scheherazade')}
+                      className="mr-3 accent-teal-700"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">Scheherazade</p>
+                      <p className="text-xs text-gray-500">Traditional Arabic style</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="quranFont"
+                      value="tajweed"
+                      checked={quranFont === 'tajweed'}
+                      onChange={() => {
+                        console.log('🔘 Tajweed radio clicked!')
+                        setQuranFont('tajweed')
+                        console.log('🔘 quranFont state set to tajweed')
+                      }}
+                      className="mr-3 accent-teal-700"
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-800">Tajweed (🎨 Colored)</p>
+                      <p className="text-xs text-gray-500">Tajweed rules with colors</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1330,7 +1525,7 @@ export function SurahDetail() {
                           // Fetch updated memorization progress after saving
                           const progress = await readingAPI.getMemorizationProgress(surah.number)
                           if (progress) {
-                            setMemorizationPercentage(progress.totalPercentage || 0)
+                            // setMemorizationPercentage(progress.totalPercentage || 0) // Disabled for now
                             console.log(`📊 Updated memorization percentage: ${progress.totalPercentage}%`)
                           }
                         } catch (error) {
